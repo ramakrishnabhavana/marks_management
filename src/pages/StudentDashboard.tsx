@@ -82,7 +82,7 @@ const mockStudentData = {
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
-  const [selectedSubject, setSelectedSubject] = useState(null);
+  const [selectedSubject, setSelectedSubject] = useState<typeof mockStudentData.subjects[0] | null>(null);
 
   const handleLogout = () => {
     localStorage.removeItem("userRole");
@@ -90,21 +90,21 @@ const StudentDashboard = () => {
     navigate("/");
   };
 
-  const getPerformanceColor = (percentage) => {
+  const getPerformanceColor = (percentage: number) => {
     if (percentage >= 90) return "text-success";
     if (percentage >= 75) return "text-info";
     if (percentage >= 60) return "text-warning";
     return "text-destructive";
   };
 
-  const getPerformanceBadge = (percentage) => {
+  const getPerformanceBadge = (percentage: number) => {
     if (percentage >= 90) return <Badge className="bg-success">Excellent</Badge>;
     if (percentage >= 75) return <Badge className="bg-info">Good</Badge>;
     if (percentage >= 60) return <Badge className="bg-warning text-white">Average</Badge>;
     return <Badge variant="destructive">Needs Improvement</Badge>;
   };
 
-  const calculateAverage = (marks) => {
+  const calculateAverage = (marks: number[]) => {
     return (marks.reduce((a, b) => a + b, 0) / marks.length).toFixed(1);
   };
 

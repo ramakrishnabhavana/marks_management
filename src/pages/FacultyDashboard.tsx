@@ -62,9 +62,9 @@ const mockStudents = [
 const FacultyDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [selectedSubject, setSelectedSubject] = useState(null);
+  const [selectedSubject, setSelectedSubject] = useState<typeof mockFacultyData.subjects[0] | null>(null);
   const [selectedTest, setSelectedTest] = useState("");
-  const [bulkMarks, setBulkMarks] = useState({});
+  const [bulkMarks, setBulkMarks] = useState<Record<string, string>>({});
 
   const handleLogout = () => {
     localStorage.removeItem("userRole");
@@ -97,7 +97,7 @@ const FacultyDashboard = () => {
     }
   };
 
-  const handleBulkMarkChange = (studentId, value) => {
+  const handleBulkMarkChange = (studentId: string, value: string) => {
     setBulkMarks(prev => ({ ...prev, [studentId]: value }));
   };
 
