@@ -65,6 +65,7 @@ const FacultyDashboard = () => {
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [selectedTest, setSelectedTest] = useState("");
   const [bulkMarks, setBulkMarks] = useState({});
+  const [weekCount, setWeekCount] = useState(3);
 
   const handleLogout = () => {
     localStorage.removeItem("userRole");
@@ -87,14 +88,24 @@ const FacultyDashboard = () => {
         { value: "attendance", label: "Attendance (Max 5)", max: 5 },
       ];
     } else {
-      return [
-        { value: "weeklycie1", label: "Weekly CIE 1 (Max 30)", max: 30 },
-        { value: "weeklycie2", label: "Weekly CIE 2 (Max 30)", max: 30 },
-        { value: "weeklycie3", label: "Weekly CIE 3 (Max 30)", max: 30 },
+      const weekOptions = [];
+      for (let i = 1; i <= weekCount; i++) {
+        weekOptions.push({ value: `weeklycie${i}`, label: `Weekly CIE ${i} (Max 30)`, max: 30 });
+      }
+      weekOptions.push(
         { value: "internaltest1", label: "Internal Test 1 (Max 20)", max: 20 },
-        { value: "internaltest2", label: "Internal Test 2 (Max 20)", max: 20 },
-      ];
+        { value: "internaltest2", label: "Internal Test 2 (Max 20)", max: 20 }
+      );
+      return weekOptions;
     }
+  };
+
+  const handleAddWeek = () => {
+    setWeekCount(prev => prev + 1);
+    toast({
+      title: "Week Added",
+      description: `Week ${weekCount + 1} has been added to the assessment list`,
+    });
   };
 
   const handleBulkMarkChange = (studentId, value) => {
@@ -131,15 +142,15 @@ const FacultyDashboard = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-gradient-accent text-white shadow-lg">
-        <div className="container mx-auto px-4 py-6">
+        <div className="container mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                <Users className="w-7 h-7" />
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center">
+                <Users className="w-8 h-8" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Faculty Portal</h1>
-                <p className="text-white/90 text-sm">{mockFacultyData.name}</p>
+                <h1 className="text-3xl font-bold mb-1">Faculty Portal</h1>
+                <p className="text-white/90">{mockFacultyData.name}</p>
               </div>
             </div>
             <Button variant="outline" className="text-white border-white hover:bg-white/20" onClick={handleLogout}>
@@ -150,45 +161,51 @@ const FacultyDashboard = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-6 py-10">
         {/* Subjects Overview */}
-        <Card className="mb-6 shadow-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5" />
+        <Card className="shadow-lg mb-8">
+          <CardHeader className="pb-6">
+            <CardTitle className="flex items-center gap-3 text-2xl">
+              <BookOpen className="w-6 h-6" />
               My Subjects
             </CardTitle>
-            <CardDescription>Select a subject to upload marks</CardDescription>
+            <CardDescription className="text-base">Select a subject to upload marks</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-3 gap-6">
               {mockFacultyData.subjects.map((subject) => (
                 <Card
                   key={subject.id}
-                  className={`cursor-pointer transition-all hover:shadow-lg ${
-                    selectedSubject?.id === subject.id ? "border-2 border-primary shadow-md" : ""
+                  className={`cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 ${
+                    selectedSubject?.id === subject.id ? "border-2 border-primary shadow-md" : "border-2 border-transparent"
                   }`}
                   onClick={() => setSelectedSubject(subject)}
                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">{subject.courseCode}</CardTitle>
-                        <CardDescription className="mt-1">{subject.name}</CardDescription>
+                  <CardHeader className="pb-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <CardTitle className="text-xl mb-2">{subject.courseCode}</CardTitle>
+                        <CardDescription className="text-sm leading-relaxed">{subject.name}</CardDescription>
                       </div>
-                      <Badge variant={subject.type === "theory" ? "default" : "secondary"}>
+                      <Badge variant={subject.type === "theory" ? "default" : "secondary"} className="ml-2">
                         {subject.type === "theory" ? "Theory" : "Lab"}
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Class: {subject.class}</span>
-                      <span>Credits: {subject.credits}</span>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Class:</span>
+                      <span className="font-medium">{subject.class}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {subject.students} students
-                    </p>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Credits:</span>
+                      <span className="font-medium">{subject.credits}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Students:</span>
+                      <span className="font-semibold text-primary">{subject.students}</span>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -199,39 +216,57 @@ const FacultyDashboard = () => {
         {/* Marks Upload/View Section */}
         {selectedSubject && (
           <Card className="shadow-lg border-primary">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="w-5 h-5" />
+            <CardHeader className="pb-6">
+              <CardTitle className="flex items-center gap-3 text-2xl">
+                <Upload className="w-6 h-6" />
                 Manage Marks - {selectedSubject.name}
               </CardTitle>
-              <CardDescription>
-                {selectedSubject.courseCode} | {selectedSubject.class} | {selectedSubject.type === "theory" ? "Theory" : "Lab"}
+              <CardDescription className="text-base mt-2">
+                {selectedSubject.courseCode} | {selectedSubject.class} | {selectedSubject.type === "theory" ? "Theory Subject (CIE: 40)" : "Lab Subject (CIE: 50)"}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="upload" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="upload">
+                <TabsList className="grid w-full grid-cols-2 h-12">
+                  <TabsTrigger value="upload" className="text-base">
                     <Upload className="w-4 h-4 mr-2" />
                     Upload Marks
                   </TabsTrigger>
-                  <TabsTrigger value="view">
+                  <TabsTrigger value="view" className="text-base">
                     <Eye className="w-4 h-4 mr-2" />
                     View Student-Wise
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="upload" className="space-y-6 mt-6">
+                <TabsContent value="upload" className="space-y-6 mt-8">
+                  {/* Lab Week Management */}
+                  {selectedSubject.type === "lab" && (
+                    <div className="bg-accent/10 p-5 rounded-lg border border-accent/20">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-semibold text-base mb-1">Weekly CIE Management</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Currently tracking {weekCount} weeks of lab assessments
+                          </p>
+                        </div>
+                        <Button onClick={handleAddWeek} variant="outline" className="gap-2">
+                          <Upload className="w-4 h-4" />
+                          Add Week
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Test Selection */}
-                  <div className="space-y-2">
-                    <Label htmlFor="test">Select Test/Assessment</Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="test" className="text-base font-semibold">Select Test/Assessment</Label>
                     <Select value={selectedTest} onValueChange={setSelectedTest}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-12 text-base">
                         <SelectValue placeholder="Choose a test to upload marks" />
                       </SelectTrigger>
                       <SelectContent>
                         {getTestOptions().map(test => (
-                          <SelectItem key={test.value} value={test.value}>
+                          <SelectItem key={test.value} value={test.value} className="text-base">
                             {test.label}
                           </SelectItem>
                         ))}
@@ -241,36 +276,37 @@ const FacultyDashboard = () => {
 
                   {/* Bulk Upload Table */}
                   {selectedTest && (
-                    <div className="space-y-4">
-                      <div className="bg-primary/5 p-4 rounded-lg">
+                    <div className="space-y-6">
+                      <div className="bg-primary/10 p-5 rounded-lg border border-primary/20">
                         <h3 className="font-semibold text-lg mb-2">
                           {getTestOptions().find(t => t.value === selectedTest)?.label}
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                          Enter marks for all students below
+                          Enter marks for all students below. Maximum marks: {getTestOptions().find(t => t.value === selectedTest)?.max}
                         </p>
                       </div>
 
-                      <div className="border rounded-lg overflow-hidden">
-                        <div className="bg-muted px-4 py-3 grid grid-cols-3 gap-4 font-semibold text-sm">
+                      <div className="border rounded-lg overflow-hidden shadow-sm">
+                        <div className="bg-muted px-6 py-4 grid grid-cols-3 gap-6 font-semibold">
                           <div>Roll Number</div>
                           <div>Student Name</div>
                           <div>Marks</div>
                         </div>
                         <div className="divide-y">
                           {getClassStudents().map((student) => (
-                            <div key={student.id} className="px-4 py-3 grid grid-cols-3 gap-4 items-center hover:bg-muted/50">
-                              <div className="font-medium text-sm">{student.rollNo}</div>
-                              <div className="text-sm">{student.name}</div>
+                            <div key={student.id} className="px-6 py-4 grid grid-cols-3 gap-6 items-center hover:bg-muted/50 transition-colors">
+                              <div className="font-medium">{student.rollNo}</div>
+                              <div>{student.name}</div>
                               <div>
                                 <Input
                                   type="number"
                                   step="0.5"
+                                  min="0"
                                   max={getTestOptions().find(t => t.value === selectedTest)?.max}
                                   placeholder="0"
                                   value={bulkMarks[student.id] || ""}
                                   onChange={(e) => handleBulkMarkChange(student.id, e.target.value)}
-                                  className="max-w-[100px]"
+                                  className="max-w-[120px] h-11"
                                 />
                               </div>
                             </div>
@@ -278,13 +314,13 @@ const FacultyDashboard = () => {
                         </div>
                       </div>
 
-                      <div className="pt-4">
+                      <div className="pt-2">
                         <Button 
                           onClick={handleSubmitBulkMarks} 
-                          className="w-full bg-gradient-primary hover:opacity-90" 
+                          className="w-full bg-gradient-primary hover:opacity-90 h-12 text-base" 
                           size="lg"
                         >
-                          <Upload className="w-4 h-4 mr-2" />
+                          <Upload className="w-5 h-5 mr-2" />
                           Submit Marks for All Students
                         </Button>
                       </div>
@@ -292,10 +328,13 @@ const FacultyDashboard = () => {
                   )}
                 </TabsContent>
 
-                <TabsContent value="view" className="space-y-4 mt-6">
-                  <p className="text-sm text-muted-foreground">
-                    View detailed marks breakdown for individual students (coming soon)
-                  </p>
+                <TabsContent value="view" className="space-y-4 mt-8">
+                  <div className="bg-muted/50 p-8 rounded-lg text-center">
+                    <Eye className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground text-base">
+                      View detailed marks breakdown for individual students (coming soon)
+                    </p>
+                  </div>
                 </TabsContent>
               </Tabs>
             </CardContent>

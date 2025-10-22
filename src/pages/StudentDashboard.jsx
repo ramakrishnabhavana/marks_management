@@ -3,15 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, GraduationCap, BookOpen } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
+import { LogOut, GraduationCap, BookOpen, BarChart3, FileText, ClipboardList, FileCheck, Calendar } from "lucide-react";
 
 // Mock data for demonstration
 const mockStudentData = {
@@ -24,42 +17,12 @@ const mockStudentData = {
       name: "Software Engineering",
       type: "theory",
       credits: 3,
+      maxCIE: 40,
       marks: {
         slipTests: [4, 5, 3],
         assignments: [8, 10],
         classTests: [15, 18],
         attendance: 5,
-        totalCIE: 40,
-        external: 60,
-        total: 100,
-      },
-    },
-    {
-      courseCode: "22CSC23",
-      name: "CASE Tools Lab",
-      type: "lab",
-      credits: 1,
-      marks: {
-        weeklyCIE: [28, 30, 25],
-        internalTests: [18, 20],
-        totalCIE: 47,
-        external: 50,
-        total: 97,
-      },
-    },
-    {
-      courseCode: "22CSC22",
-      name: "Database Management Systems",
-      type: "theory",
-      credits: 3,
-      marks: {
-        slipTests: [5, 4, 5],
-        assignments: [9, 8],
-        classTests: [18, 17],
-        attendance: 5,
-        totalCIE: 42,
-        external: 58,
-        total: 100,
       },
     },
     {
@@ -67,14 +30,23 @@ const mockStudentData = {
       name: "Computer Networks",
       type: "theory",
       credits: 3,
+      maxCIE: 40,
       marks: {
         slipTests: [3, 4, 4],
         assignments: [7, 9],
         classTests: [16, 15],
         attendance: 4,
-        totalCIE: 36,
-        external: 55,
-        total: 91,
+      },
+    },
+    {
+      courseCode: "22CSC23",
+      name: "CASE Tools Lab",
+      type: "lab",
+      credits: 1,
+      maxCIE: 50,
+      marks: {
+        weeklyCIE: [28, 30, 25],
+        internalTests: [18, 20],
       },
     },
   ],
@@ -90,22 +62,18 @@ const StudentDashboard = () => {
     navigate("/");
   };
 
-  const getPerformanceColor = (percentage) => {
-    if (percentage >= 90) return "text-success";
-    if (percentage >= 75) return "text-info";
-    if (percentage >= 60) return "text-warning";
-    return "text-destructive";
-  };
-
-  const getPerformanceBadge = (percentage) => {
-    if (percentage >= 90) return <Badge className="bg-success">Excellent</Badge>;
-    if (percentage >= 75) return <Badge className="bg-info">Good</Badge>;
-    if (percentage >= 60) return <Badge className="bg-warning text-white">Average</Badge>;
-    return <Badge variant="destructive">Needs Improvement</Badge>;
-  };
-
-  const calculateAverage = (marks) => {
-    return (marks.reduce((a, b) => a + b, 0) / marks.length).toFixed(1);
+  const calculateCIETotal = (subject) => {
+    if (subject.type === "theory") {
+      const slipTestTotal = subject.marks.slipTests.reduce((a, b) => a + b, 0);
+      const assignmentTotal = subject.marks.assignments.reduce((a, b) => a + b, 0);
+      const classTestTotal = subject.marks.classTests.reduce((a, b) => a + b, 0);
+      const attendance = subject.marks.attendance;
+      return slipTestTotal + assignmentTotal + classTestTotal + attendance;
+    } else {
+      const weeklyCIETotal = subject.marks.weeklyCIE.reduce((a, b) => a + b, 0);
+      const internalTestTotal = subject.marks.internalTests.reduce((a, b) => a + b, 0);
+      return weeklyCIETotal + internalTestTotal;
+    }
   };
 
   return (
@@ -131,191 +99,186 @@ const StudentDashboard = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        {/* Student Info */}
-        <Card className="mb-6 shadow-card">
-          <CardHeader>
-            <CardTitle>Academic Overview</CardTitle>
-            <CardDescription>
-              Roll No: {mockStudentData.rollNo} | Class: {mockStudentData.class}
-            </CardDescription>
-          </CardHeader>
-        </Card>
-
-        {/* Subjects Overview */}
-        <Card className="mb-6 shadow-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5" />
-              Subjects & Performance
+      <main className="container mx-auto px-6 py-10">
+        {/* Subjects List */}
+        <Card className="shadow-lg">
+          <CardHeader className="pb-6">
+            <CardTitle className="flex items-center gap-3 text-2xl">
+              <BookOpen className="w-6 h-6" />
+              My Subjects
             </CardTitle>
-            <CardDescription>Click on a subject to view detailed marks breakdown</CardDescription>
+            <CardDescription className="text-base">Click on a subject to view detailed marks breakdown</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Course Code</TableHead>
-                  <TableHead>Subject Name</TableHead>
-                  <TableHead className="text-center">Credits</TableHead>
-                  <TableHead className="text-center">CIE Marks</TableHead>
-                  <TableHead className="text-center">External</TableHead>
-                  <TableHead className="text-center">Total</TableHead>
-                  <TableHead className="text-center">Performance</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mockStudentData.subjects.map((subject) => {
-                  const percentage = (subject.marks.total / 100) * 100;
-                  return (
-                    <TableRow
-                      key={subject.courseCode}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => setSelectedSubject(subject)}
-                    >
-                      <TableCell className="font-medium">{subject.courseCode}</TableCell>
-                      <TableCell>{subject.name}</TableCell>
-                      <TableCell className="text-center">{subject.credits}</TableCell>
-                      <TableCell className="text-center font-semibold">{subject.marks.totalCIE}/50</TableCell>
-                      <TableCell className="text-center">{subject.marks.external}/50</TableCell>
-                      <TableCell className={`text-center font-bold text-lg ${getPerformanceColor(percentage)}`}>
-                        {subject.marks.total}
-                      </TableCell>
-                      <TableCell className="text-center">{getPerformanceBadge(percentage)}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {mockStudentData.subjects.map((subject) => (
+                <Card
+                  key={subject.courseCode}
+                  className={`cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 ${
+                    selectedSubject?.courseCode === subject.courseCode ? "border-2 border-primary shadow-md" : "border-2 border-transparent"
+                  }`}
+                  onClick={() => setSelectedSubject(subject)}
+                >
+                  <CardHeader className="pb-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <CardTitle className="text-xl mb-2">{subject.courseCode}</CardTitle>
+                        <CardDescription className="text-sm leading-relaxed">{subject.name}</CardDescription>
+                      </div>
+                      <Badge variant={subject.type === "theory" ? "default" : "secondary"} className="ml-2">
+                        {subject.type === "theory" ? "Theory" : "Lab"}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-sm text-muted-foreground">Type</span>
+                      <span className="font-medium">
+                        {subject.type === "theory" ? "Theory (CIE: 40)" : "Lab (CIE: 50)"}
+                      </span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-sm font-semibold">CIE Total</span>
+                      <span className="font-bold text-2xl text-primary">
+                        {calculateCIETotal(subject)}/{subject.maxCIE}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Detailed Breakdown */}
+        {/* Detailed Marks View */}
         {selectedSubject && (
-          <Card className="shadow-lg border-primary">
-            <CardHeader>
-              <CardTitle>{selectedSubject.name} - Detailed Breakdown</CardTitle>
-              <CardDescription>
-                {selectedSubject.courseCode} | {selectedSubject.type === "theory" ? "Theory" : "Lab"} | {selectedSubject.credits} Credits
-              </CardDescription>
+          <Card className="shadow-lg border-primary mt-8">
+            <CardHeader className="pb-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-3 text-2xl mb-2">
+                    <BarChart3 className="w-6 h-6" />
+                    {selectedSubject.name}
+                  </CardTitle>
+                  <CardDescription className="text-base">
+                    {selectedSubject.courseCode} | {selectedSubject.type === "theory" ? "Theory Subject" : "Lab Subject"}
+                  </CardDescription>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground mb-1">Final Total</p>
+                  <p className="text-3xl font-bold text-primary">
+                    {calculateCIETotal(selectedSubject)}/{selectedSubject.maxCIE}
+                  </p>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              {selectedSubject.type === "theory" ? (
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-lg border-b pb-2">Internal Evaluation</h3>
-                    
-                    <div className="bg-muted/30 p-4 rounded-lg">
-                      <p className="font-medium mb-2">Slip Tests (Best 2 of 3) - 5 marks</p>
-                      <div className="flex gap-2 text-sm">
+              <div className="space-y-8">
+                {selectedSubject.type === "theory" ? (
+                  <>
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg flex items-center gap-2 text-primary">
+                        <FileText className="w-5 h-5" />
+                        Slip Tests (Max 5 each)
+                      </h3>
+                      <div className="grid grid-cols-3 gap-4">
                         {selectedSubject.marks.slipTests.map((mark, idx) => (
-                          <Badge key={idx} variant="outline">{mark}</Badge>
+                          <Card key={idx} className="bg-muted/30 border-muted">
+                            <CardContent className="pt-6 pb-6 text-center">
+                              <p className="text-sm text-muted-foreground mb-2 font-medium">Slip Test {idx + 1}</p>
+                              <p className="text-3xl font-bold text-primary">{mark}/5</p>
+                            </CardContent>
+                          </Card>
                         ))}
                       </div>
-                      <p className="text-sm mt-2 text-muted-foreground">
-                        Average: {calculateAverage(selectedSubject.marks.slipTests.sort((a, b) => b - a).slice(0, 2))}
-                      </p>
                     </div>
 
-                    <div className="bg-muted/30 p-4 rounded-lg">
-                      <p className="font-medium mb-2">Assignments - 10 marks</p>
-                      <div className="flex gap-2 text-sm">
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg flex items-center gap-2 text-primary">
+                        <ClipboardList className="w-5 h-5" />
+                        Assignments (Max 10 each)
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
                         {selectedSubject.marks.assignments.map((mark, idx) => (
-                          <Badge key={idx} variant="outline">{mark}</Badge>
+                          <Card key={idx} className="bg-muted/30 border-muted">
+                            <CardContent className="pt-6 pb-6 text-center">
+                              <p className="text-sm text-muted-foreground mb-2 font-medium">Assignment {idx + 1}</p>
+                              <p className="text-3xl font-bold text-primary">{mark}/10</p>
+                            </CardContent>
+                          </Card>
                         ))}
                       </div>
-                      <p className="text-sm mt-2 text-muted-foreground">
-                        Average: {calculateAverage(selectedSubject.marks.assignments)}
-                      </p>
                     </div>
 
-                    <div className="bg-muted/30 p-4 rounded-lg">
-                      <p className="font-medium mb-2">Class Tests - 20 marks</p>
-                      <div className="flex gap-2 text-sm">
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg flex items-center gap-2 text-primary">
+                        <FileCheck className="w-5 h-5" />
+                        Class Tests (Max 20 each)
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
                         {selectedSubject.marks.classTests.map((mark, idx) => (
-                          <Badge key={idx} variant="outline">{mark}</Badge>
+                          <Card key={idx} className="bg-muted/30 border-muted">
+                            <CardContent className="pt-6 pb-6 text-center">
+                              <p className="text-sm text-muted-foreground mb-2 font-medium">Class Test {idx + 1}</p>
+                              <p className="text-3xl font-bold text-primary">{mark}/20</p>
+                            </CardContent>
+                          </Card>
                         ))}
                       </div>
-                      <p className="text-sm mt-2 text-muted-foreground">
-                        Average: {calculateAverage(selectedSubject.marks.classTests)}
-                      </p>
                     </div>
 
-                    <div className="bg-muted/30 p-4 rounded-lg">
-                      <p className="font-medium mb-2">Attendance - 5 marks</p>
-                      <Badge variant="outline">{selectedSubject.marks.attendance}</Badge>
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg flex items-center gap-2 text-primary">
+                        <Calendar className="w-5 h-5" />
+                        Attendance (Max 5)
+                      </h3>
+                      <Card className="bg-muted/30 border-muted max-w-xs">
+                        <CardContent className="pt-6 pb-6 text-center">
+                          <p className="text-sm text-muted-foreground mb-2 font-medium">Attendance Marks</p>
+                          <p className="text-3xl font-bold text-primary">{selectedSubject.marks.attendance}/5</p>
+                        </CardContent>
+                      </Card>
                     </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-lg border-b pb-2">Summary</h3>
-                    
-                    <div className="bg-primary/10 p-6 rounded-lg space-y-3">
-                      <div className="flex justify-between items-center pb-2 border-b border-primary/20">
-                        <span className="font-medium">Total CIE Marks:</span>
-                        <span className="text-2xl font-bold text-primary">{selectedSubject.marks.totalCIE}/50</span>
-                      </div>
-                      <div className="flex justify-between items-center pb-2 border-b border-primary/20">
-                        <span className="font-medium">External Marks:</span>
-                        <span className="text-2xl font-bold text-primary">{selectedSubject.marks.external}/50</span>
-                      </div>
-                      <div className="flex justify-between items-center pt-2">
-                        <span className="font-bold text-lg">Final Total:</span>
-                        <span className="text-3xl font-bold text-accent">{selectedSubject.marks.total}/100</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-lg border-b pb-2">Lab Evaluation</h3>
-                    
-                    <div className="bg-muted/30 p-4 rounded-lg">
-                      <p className="font-medium mb-2">Weekly CIE</p>
-                      <div className="flex gap-2 text-sm flex-wrap">
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg flex items-center gap-2 text-primary">
+                        <FileText className="w-5 h-5" />
+                        Weekly CIE (Max 30 each)
+                      </h3>
+                      <div className="grid grid-cols-3 gap-4">
                         {selectedSubject.marks.weeklyCIE.map((mark, idx) => (
-                          <Badge key={idx} variant="outline">Week {idx + 1}: {mark}</Badge>
+                          <Card key={idx} className="bg-muted/30 border-muted">
+                            <CardContent className="pt-6 pb-6 text-center">
+                              <p className="text-sm text-muted-foreground mb-2 font-medium">Week {idx + 1}</p>
+                              <p className="text-3xl font-bold text-primary">{mark}/30</p>
+                            </CardContent>
+                          </Card>
                         ))}
                       </div>
-                      <p className="text-sm mt-2 text-muted-foreground">
-                        Average: {calculateAverage(selectedSubject.marks.weeklyCIE)}
-                      </p>
                     </div>
 
-                    <div className="bg-muted/30 p-4 rounded-lg">
-                      <p className="font-medium mb-2">Internal Tests</p>
-                      <div className="flex gap-2 text-sm">
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg flex items-center gap-2 text-primary">
+                        <FileCheck className="w-5 h-5" />
+                        Internal Tests (Max 20 each)
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
                         {selectedSubject.marks.internalTests.map((mark, idx) => (
-                          <Badge key={idx} variant="outline">Test {idx + 1}: {mark}</Badge>
+                          <Card key={idx} className="bg-muted/30 border-muted">
+                            <CardContent className="pt-6 pb-6 text-center">
+                              <p className="text-sm text-muted-foreground mb-2 font-medium">Internal Test {idx + 1}</p>
+                              <p className="text-3xl font-bold text-primary">{mark}/20</p>
+                            </CardContent>
+                          </Card>
                         ))}
                       </div>
-                      <p className="text-sm mt-2 text-muted-foreground">
-                        Average: {calculateAverage(selectedSubject.marks.internalTests)}
-                      </p>
                     </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-lg border-b pb-2">Summary</h3>
-                    
-                    <div className="bg-primary/10 p-6 rounded-lg space-y-3">
-                      <div className="flex justify-between items-center pb-2 border-b border-primary/20">
-                        <span className="font-medium">Total CIE Marks:</span>
-                        <span className="text-2xl font-bold text-primary">{selectedSubject.marks.totalCIE}/50</span>
-                      </div>
-                      <div className="flex justify-between items-center pb-2 border-b border-primary/20">
-                        <span className="font-medium">External Marks:</span>
-                        <span className="text-2xl font-bold text-primary">{selectedSubject.marks.external}/50</span>
-                      </div>
-                      <div className="flex justify-between items-center pt-2">
-                        <span className="font-bold text-lg">Final Total:</span>
-                        <span className="text-3xl font-bold text-accent">{selectedSubject.marks.total}/100</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+                  </>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}
