@@ -8,13 +8,13 @@ import { GraduationCap, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
-  const [role, setRole] = useState<"student" | "faculty" | null>(null);
+  const [role, setRole] = useState(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = (e) => {
     e.preventDefault();
     
     if (!email || !password) {
