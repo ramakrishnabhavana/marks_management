@@ -9,33 +9,61 @@ import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
   const [role, setRole] = useState(null);
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    
-    if (!email || !password) {
+
+    if (!username || !password) {
       toast({
         title: "Error",
-        description: "Please enter both email and password",
+        description: "Please enter both username and password",
         variant: "destructive",
       });
       return;
     }
 
-    // Mock login - store role in localStorage
-    localStorage.setItem("userRole", role || "");
-    localStorage.setItem("userEmail", email);
-    
-    toast({
-      title: "Login Successful",
-      description: `Welcome back!`,
-    });
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username,
+          password,
+          role
+        }),
+      });
 
-    navigate(role === "student" ? "/student" : "/faculty");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      // Store token and user info
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("userRole", data.user.role);
+      localStorage.setItem("userData", JSON.stringify(data.user));
+
+      toast({
+        title: "Login Successful",
+        description: `Welcome back, ${data.user.name}!`,
+      });
+
+      navigate(data.user.role === "student" ? "/student" : "/faculty");
+    } catch (error) {
+      console.error('Login error:', error);
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid credentials",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!role) {
@@ -122,13 +150,15 @@ const Login = () => {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">
+                {role === "student" ? "Roll Number" : "Name"}
+              </Label>
               <Input
-                id="email"
-                type="email"
-                placeholder={role === "student" ? "student@example.com" : "faculty@example.com"}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                placeholder={role === "student" ? "Enter your roll number (e.g., 160123737001)" : "Enter your name (e.g., E. Rama Lakshmi)"}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
               />
             </div>

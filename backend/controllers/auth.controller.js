@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { User } from '../models/user.model.js';
-import { FacultyHybrid } from '../models/faculty.hybrid.model.js';
-import { ClassHybrid } from '../models/class.hybrid.model.js';
+import { Faculty } from '../models/faculty.model.js';
+import { Student } from '../models/student.model.js';
 
 const generateToken = (id, role, facultyId = null, rollNo = null) => {
   const secret = process.env.JWT_SECRET;
@@ -11,16 +11,19 @@ const generateToken = (id, role, facultyId = null, rollNo = null) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password, role } = req.body;
-    const user = await User.findOne({ email, role });
+    const { username, password, role } = req.body;
+
+    // Find user by username (roll number for students, name for faculty)
+    const user = await User.findOne({ username, role });
     if (!user) {
-      console.error('User not found:', { email, role });
+      console.error('User not found:', { username, role });
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
-      console.error('Password mismatch for user:', email);
+    // Check password using bcrypt compare
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      console.error('Password mismatch for user:', username);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
@@ -29,27 +32,28 @@ export const login = async (req, res) => {
     let rollNo = null;
 
     if (role === 'faculty') {
-      // For faculty, we need to find their facultyId from FacultyHybrid collection
-      // This assumes faculty email maps to facultyId, or we can enhance this mapping
-      const faculty = await FacultyHybrid.findOne({ email: user.email });
+      // Find faculty record
+      const faculty = await Faculty.findOne({ user: user._id });
       if (faculty) {
-        facultyId = faculty.facultyId;
         additional = {
-          facultyId: faculty.facultyId,
-          department: faculty.department,
-          classesCount: faculty.classesTaught.length
+          facultyId: faculty._id.toString(),
+          name: faculty.name,
+          email: faculty.email,
+          mobile: faculty.mobile
         };
-      } else {
-        console.error('Faculty record not found for user:', user.email);
-        // Still allow login but without faculty data
       }
     } else if (role === 'student') {
-      // For students, we need to find their rollNo from ClassHybrid collections
-      // This is a simplified approach - in production, you might have a separate student mapping
-      // For now, we'll assume rollNo is stored in user model or can be derived
-      // This needs to be enhanced based on your actual data structure
-      rollNo = user.rollNo || null; // Assuming rollNo is added to User model
-      additional = { rollNo };
+      // Find student record
+      const student = await Student.findOne({ user: user._id });
+      if (student) {
+        rollNo = student.roll;
+        additional = {
+          rollNo: student.roll,
+          section: student.section,
+          year: student.year,
+          mentor: student.mentor
+        };
+      }
     }
 
     const token = generateToken(user._id.toString(), user.role, facultyId, rollNo);
@@ -59,7 +63,7 @@ export const login = async (req, res) => {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email,
+        username: user.username,
         role: user.role,
         ...additional
       }

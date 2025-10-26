@@ -8,8 +8,8 @@ const studentMarksSchema = new mongoose.Schema({
   slipTestAverage: Number,
   assignments: [Number],
   assignmentAverage: Number,
-  mids: [Number],
-  midAverage: Number,
+  classTests: [Number],
+  classTestAverage: Number,
   attendanceMarks: Number,
   totalMarks: Number,
   remarks: String

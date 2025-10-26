@@ -1,15 +1,15 @@
 import mongoose from "mongoose";
-import { Student } from "./models/student.model.js";
+import { User } from "./models/user.model.js";
 
 await mongoose.connect("mongodb://127.0.0.1:27017/marks_management");
 
 // Example student list (replace with your actual student data)
 const students = [
-  { rollNo: "160123737141", name: "AMJA MAITHILI", class: "IT1", password: "160123737141" },
-  { rollNo: "160123737142", name: "AVANI CHETLURI", class: "IT1", password: "160123737142" },
-  // ...add all students for IT1, IT2, IT3
+  { email: "160123737141@it1.com", name: "AMJA MAITHILI", role: "student", password: "160123737141", rollNo: "160123737141" },
+  { email: "160123737142@it1.com", name: "AVANI CHETLURI", role: "student", password: "160123737142", rollNo: "160123737142" },
+  // Add more students as needed
 ];
 
-await Student.insertMany(students);
+await User.insertMany(students);
 console.log("✅ Student accounts seeded!");
 process.exit();

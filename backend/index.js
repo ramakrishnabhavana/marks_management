@@ -8,7 +8,7 @@ import authRoutes from './routes/auth.routes.js';
 import studentRoutes from './routes/student.routes.js';
 import facultyRoutes from './routes/faculty.routes.js';
 
-dotenv.config();
+dotenv.config({ encoding: 'utf16le' });
 
 const app = express();
 app.use(cors());

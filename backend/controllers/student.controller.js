@@ -1,23 +1,30 @@
-import { ClassHybrid } from '../models/class.hybrid.model.js';
+import { Student } from '../models/student.model.js';
+import { Enrollment } from '../models/enrollments.model.js';
+import { Subject } from '../models/subject.model.js';
 import { StudentMarksHybrid } from '../models/studentmarks.hybrid.model.js';
 
 // Get student's enrolled subjects (classes)
 export const getSubjects = async (req, res) => {
   try {
-    // Find all classes where student is enrolled
-    const classes = await ClassHybrid.find({
-      'students.rollNo': req.user.rollNo
-    });
+    // Find student by user ID
+    const student = await Student.findOne({ user: req.user.id });
+    if (!student) return res.status(404).json({ message: 'Student not found' });
+
+    // Get all enrollments for this student
+    const enrollments = await Enrollment.find({ student: student._id })
+      .populate('subject')
+      .populate('faculty');
 
     // Format subjects data
-    const subjects = classes.map(classInfo => ({
-      courseCode: classInfo.subjectCode,
-      name: classInfo.subjectName,
-      type: 'theory', // Default to theory, can be enhanced later
-      credits: classInfo.credits,
+    const subjects = enrollments.map(enrollment => ({
+      courseCode: enrollment.subject.code,
+      name: enrollment.subject.name,
+      type: enrollment.subject.isElective ? 'elective' : 'theory', // Use isElective field
+      credits: enrollment.subject.credits,
       maxCIE: 40, // Standard CIE max, can be configured
-      classCode: classInfo.classCode,
-      className: classInfo.className
+      classCode: `${enrollment.subject.code}-${student.section}`, // Format classCode
+      className: enrollment.subject.name,
+      facultyName: enrollment.faculty?.name || 'TBD'
     }));
 
     res.json({ subjects });
@@ -32,17 +39,27 @@ export const getSubjectMarks = async (req, res) => {
   try {
     const { classCode } = req.params;
 
-    // Verify student is enrolled in this class
-    const classDetails = await ClassHybrid.findOne({
-      classCode,
-      'students.rollNo': req.user.rollNo
+    // Find student by user ID
+    const student = await Student.findOne({ user: req.user.id });
+    if (!student) return res.status(404).json({ message: 'Student not found' });
+
+    // Parse classCode to get subject code
+    const [subjectCode] = classCode.split('-');
+
+    // Verify student is enrolled in this subject
+    const subject = await Subject.findOne({ code: subjectCode });
+    if (!subject) return res.status(404).json({ message: 'Subject not found' });
+
+    const enrollment = await Enrollment.findOne({
+      student: student._id,
+      subject: subject._id
     });
-    if (!classDetails) return res.status(404).json({ message: 'Subject not found or not enrolled' });
+    if (!enrollment) return res.status(404).json({ message: 'Subject not found or not enrolled' });
 
     // Get student's marks for this class
     const marksDoc = await StudentMarksHybrid.findOne({
       classCode,
-      rollNo: req.user.rollNo
+      rollNo: student.roll
     });
 
     if (!marksDoc) {
@@ -62,10 +79,10 @@ export const getSubjectMarks = async (req, res) => {
 
     // Format marks to match frontend expectations
     const formattedMarks = {
-      slipTests: marksDoc.slipTests,
-      assignments: marksDoc.assignments,
-      classTests: marksDoc.mids, // Map mids to classTests for frontend compatibility
-      attendance: marksDoc.attendanceMarks,
+      slipTests: marksDoc.slipTests || [],
+      assignments: marksDoc.assignments || [],
+      classTests: marksDoc.classTests || [], // Map mids to classTests for frontend compatibility
+      attendance: marksDoc.attendanceMarks || 0,
       weeklyCIE: [], // For lab subjects, can be enhanced later
       internalTests: []
     };

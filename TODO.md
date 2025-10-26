@@ -1,0 +1,22 @@
+- [x] Update assignmentAverage to average only the first 2 assignments
+- [x] Update midAverage to average only the first 2 mids
+- [x] Rename mids to classTests in all files
+- [x] Update backend/models/subject.model.js: Add isElective field
+- [x] Update backend/models/student.model.js: Add section and mentor fields
+- [x] Create backend/models/enrollments.model.js
+- [x] Create backend/models/faculty_assignments.model.js
+- [x] Create backend/models/tests.model.js
+- [x] Create backend/models/marks.model.js
+- [x] Create backend/models/audit_logs.model.js
+- [x] Implement complete database setup with seed data
+- [x] Update package.json with correct dependencies
+- [x] Create .env file with MongoDB connection
+- [x] Create config/db.js for database connection
+- [x] Create comprehensive seed script with IT department data
+- [x] Create server.js with proper structure
+- [x] Standardize backend port to 5000
+- [x] Update frontend fetch calls to use consistent port (5000)
+- [x] Refactor student controller to use normalized models
+- [x] Fix data structure responses to match frontend expectations
+- [x] Test authentication and data retrieval flows
+- [x] Verify all fetch calls work correctly

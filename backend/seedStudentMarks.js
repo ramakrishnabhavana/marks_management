@@ -13,8 +13,8 @@ const marksData = [
     slipTestAverage: 5,
     assignments: [10, 9],
     assignmentAverage: 9.5,
-    mids: [18, 20],
-    midAverage: 19,
+    classTests: [18, 20],
+    classTestAverage: 19,
     attendanceMarks: 5,
     totalMarks: 38.5,
     remarks: "Excellent performance"
@@ -27,8 +27,8 @@ const marksData = [
     slipTestAverage: 4.75,
     assignments: [9, 8],
     assignmentAverage: 8.5,
-    mids: [17, 19],
-    midAverage: 18,
+    classTests: [17, 19],
+    classTestAverage: 18,
     attendanceMarks: 4,
     totalMarks: 35.25,
     remarks: "Good progress"

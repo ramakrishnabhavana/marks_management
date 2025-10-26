@@ -35,7 +35,7 @@ const FacultyDashboard = () => {
   const fetchFacultyData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/faculty/subjects', {
+      const response = await fetch('http://localhost:5000/api/faculty/subjects', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -61,7 +61,7 @@ const FacultyDashboard = () => {
   const fetchStudentsForClass = async (classCode) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/faculty/classes/${classCode}/students`, {
+      const response = await fetch(`http://localhost:5000/api/faculty/classes/${classCode}/students`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -104,7 +104,7 @@ const FacultyDashboard = () => {
     return [
       { value: "slipTests", label: "Slip Tests (Array)", max: 5 },
       { value: "assignments", label: "Assignments (Array)", max: 10 },
-      { value: "mids", label: "Mid Semester Tests (Array)", max: 20 },
+      { value: "classTests", label: "Class Tests (Array)", max: 20 },
       { value: "attendanceMarks", label: "Attendance Marks", max: 5 },
     ];
   };
@@ -142,7 +142,7 @@ const FacultyDashboard = () => {
     setUploading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/faculty/classes/${selectedSubject.classCode}/marks/bulk`, {
+      const response = await fetch(`http://localhost:5000/api/faculty/classes/${selectedSubject.classCode}/marks/bulk`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -386,7 +386,7 @@ const FacultyDashboard = () => {
                         <div>Name</div>
                         <div>Slip Test Avg</div>
                         <div>Assignment Avg</div>
-                        <div>Mid Avg</div>
+                        <div>Class Test Avg</div>
                         <div>Total</div>
                       </div>
                       <div className="divide-y">
@@ -396,7 +396,7 @@ const FacultyDashboard = () => {
                             <div>{student.name}</div>
                             <div>{student.marks?.slipTestAverage || 0}</div>
                             <div>{student.marks?.assignmentAverage || 0}</div>
-                            <div>{student.marks?.midAverage || 0}</div>
+                            <div>{student.marks?.classTestAverage || 0}</div>
                             <div className="font-semibold text-primary">{student.marks?.totalMarks || 0}</div>
                           </div>
                         ))}

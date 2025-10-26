@@ -1,16 +1,16 @@
-export function computeAverages({ slipTests, assignments, mids, attendanceMarks }) {
+export function computeAverages({ slipTests, assignments, classTests, attendanceMarks }) {
   const slipBest2 = slipTests
     .sort((a, b) => b - a)
     .slice(0, 2);
   const slipTestAverage = slipBest2.reduce((a, b) => a + b, 0) / 2;
 
   const assignmentAverage =
-    assignments.reduce((a, b) => a + b, 0) / assignments.length;
+    assignments.slice(0, 2).reduce((a, b) => a + b, 0) / 2;
 
-  const midAverage = mids.reduce((a, b) => a + b, 0) / mids.length;
+  const classTestAverage = classTests.slice(0, 2).reduce((a, b) => a + b, 0) / 2;
 
   const totalMarks =
-    slipTestAverage + assignmentAverage + midAverage + attendanceMarks;
+    slipTestAverage + assignmentAverage + classTestAverage + attendanceMarks;
 
-  return { slipTestAverage, assignmentAverage, midAverage, totalMarks };
+  return { slipTestAverage, assignmentAverage, classTestAverage, totalMarks };
 }
