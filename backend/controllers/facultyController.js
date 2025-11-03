@@ -63,7 +63,7 @@ export const getClassStudents = async (req, res) => {
     const assignment = await FacultyAssignment.findOne({
       faculty: faculty._id,
       subject: subject._id,
-      sections: section
+      sections: { $in: [section] }
     });
 
     if (!assignment) {
@@ -175,7 +175,7 @@ export const getStudentsForSubject = async (req, res) => {
     const assignment = await FacultyAssignment.findOne({
       faculty: faculty._id,
       subject: subject._id,
-      sections: section
+      sections: { $in: [section] }
     });
 
     if (!assignment) {
@@ -279,7 +279,7 @@ export const updateStudentMarks = async (req, res) => {
     const assignment = await FacultyAssignment.findOne({
       faculty: faculty._id,
       subject: subject._id,
-      sections: section || student.section
+      sections: { $in: [section || student.section] }
     });
 
     if (!assignment) {
@@ -402,7 +402,7 @@ export const bulkUpdateMarks = async (req, res) => {
     const assignment = await FacultyAssignment.findOne({
       faculty: faculty._id,
       subject: subject._id,
-      sections: section
+      sections: { $in: [section] }
     });
 
     if (!assignment) {
