@@ -1,6 +1,5 @@
 import express from 'express';
-import { auth } from '../middleware/auth.js';
-import { authorize } from '../middleware/auth.js';
+import { auth, authorize } from '../middleware/auth.js';
 import {
   getStudentProfile,
   getStudentMarksBySubject

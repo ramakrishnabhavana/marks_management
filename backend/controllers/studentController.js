@@ -1,7 +1,7 @@
-import { Student } from '../models/Student.js';
-import { Marks } from '../models/Marks.js';
-import { Subject } from '../models/Subject.js';
-import { Enrollment } from '../models/Enrollment.js';
+import Student from '../models/Student.js';
+import Marks from '../models/Marks.js';
+import Subject from '../models/Subject.js';
+import Enrollment from '../models/Enrollment.js';
 
 export const getStudentProfile = async (req, res) => {
   try {

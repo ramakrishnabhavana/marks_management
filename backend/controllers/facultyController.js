@@ -1,92 +1,143 @@
-import { Faculty } from '../models/Faculty.js';
-import { Subject } from '../models/Subject.js';
-import { Marks } from '../models/Marks.js';
-import { Student } from '../models/Student.js';
-import { Enrollment } from '../models/Enrollment.js';
-import { FacultyAssignment } from '../models/FacultyAssignment.js';
+import Faculty from '../models/Faculty.js';
+import Student from '../models/Student.js';
+import Subject from '../models/Subject.js';
+import Marks from '../models/Marks.js';
+import Enrollment from '../models/Enrollment.js';
+import FacultyAssignment from '../models/FacultyAssignment.js';
+
+export const getFacultySubjects = async (req, res) => {
+  try {
+    const faculty = await Faculty.findOne({ user: req.user.id });
+    if (!faculty) return res.status(404).json({ message: 'Faculty not found' });
+
+    // Get faculty assignments with student counts
+    const assignments = await FacultyAssignment.find({ faculty: faculty._id })
+      .populate('subject', 'code name credits type')
+      .populate('sections');
+
+    const subjectsWithDetails = await Promise.all(
+      assignments.map(async (assignment) => {
+        const studentCount = await Enrollment.countDocuments({
+          subject: assignment.subject._id,
+          section: { $in: assignment.sections }
+        });
+
+        return {
+          classCode: `${assignment.subject.code}-${assignment.sections[0]}`,
+          subjectCode: assignment.subject.code,
+          subjectName: assignment.subject.name,
+          credits: assignment.subject.credits,
+          type: assignment.subject.type,
+          sections: assignment.sections,
+          studentCount,
+          semester: assignment.semester
+        };
+      })
+    );
+
+    res.json({
+      faculty: {
+        name: faculty.name,
+        department: faculty.department
+      },
+      subjects: subjectsWithDetails
+    });
+  } catch (error) {
+    console.error('Get faculty subjects error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const getClassStudents = async (req, res) => {
+  try {
+    const { classCode } = req.params;
+    const [subjectCode, section] = classCode.split('-');
+
+    const faculty = await Faculty.findOne({ user: req.user.id });
+    if (!faculty) return res.status(404).json({ message: 'Faculty not found' });
+
+    const subject = await Subject.findOne({ code: subjectCode });
+    if (!subject) return res.status(404).json({ message: 'Subject not found' });
+
+    // Verify faculty teaches this subject and section
+    const assignment = await FacultyAssignment.findOne({
+      faculty: faculty._id,
+      subject: subject._id,
+      sections: section
+    });
+
+    if (!assignment) {
+      return res.status(403).json({ message: 'Not authorized for this class' });
+    }
+
+    // Get enrolled students with their marks
+    const enrollments = await Enrollment.find({
+      subject: subject._id,
+      section: section
+    }).populate('student', 'rollNo name');
+
+    const studentsWithMarks = await Promise.all(
+      enrollments.map(async (enrollment) => {
+        const marks = await Marks.findOne({
+          student: enrollment.student._id,
+          subject: subject._id
+        });
+
+        let marksSummary = {};
+        if (marks && subject.type === 'theory') {
+          const slipTestAvg = marks.slipTests.length > 0 ?
+            marks.slipTests.reduce((a, b) => a + b.marks, 0) / marks.slipTests.length : 0;
+
+          const assignmentAvg = marks.assignments.length > 0 ?
+            marks.assignments.reduce((a, b) => a + b.marks, 0) / marks.assignments.length : 0;
+
+          const internalTestAvg = marks.internalTests.length > 0 ?
+            marks.internalTests.reduce((a, b) => a + b.marks, 0) / marks.internalTests.length : 0;
+
+          marksSummary = {
+            slipTestAverage: parseFloat(slipTestAvg.toFixed(2)),
+            assignmentAverage: parseFloat(assignmentAvg.toFixed(2)),
+            internalTestAverage: parseFloat(internalTestAvg.toFixed(2)),
+            totalMarks: slipTestAvg + assignmentAvg + internalTestAvg + (marks.attendance?.marks || 0)
+          };
+        }
+
+        return {
+          rollNo: enrollment.student.rollNo,
+          name: enrollment.student.name,
+          marks: marks ? { ...marksSummary } : null
+        };
+      })
+    );
+
+    res.json({
+      subject: {
+        code: subject.code,
+        name: subject.name,
+        type: subject.type
+      },
+      section,
+      students: studentsWithMarks
+    });
+  } catch (error) {
+    console.error('Get class students error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
 
 export const getFacultyProfile = async (req, res) => {
   try {
     const faculty = await Faculty.findOne({ user: req.user.id })
-      .populate('timetable.Monday.subject')
-      .populate('timetable.Tuesday.subject')
-      .populate('timetable.Wednesday.subject')
-      .populate('timetable.Thursday.subject')
-      .populate('timetable.Friday.subject')
-      .populate('timetable.Saturday.subject');
+      .populate('subjects', 'code name credits type');
 
     if (!faculty) {
       return res.status(404).json({ message: 'Faculty not found' });
     }
 
-    // Get assigned subjects with details
+    // Get faculty assignments
     const assignments = await FacultyAssignment.find({ faculty: faculty._id })
-      .populate('subject', 'code name credits type');
-
-    const subjectsWithDetails = await Promise.all(
-      assignments.map(async (assignment) => {
-        const subject = assignment.subject;
-        const sections = assignment.sections;
-
-        // Get student counts and marks summary for each section
-        const sectionDetails = await Promise.all(
-          sections.map(async (section) => {
-            const studentCount = await Enrollment.countDocuments({
-              subject: subject._id,
-              section: section
-            });
-
-            const marksSummary = await Marks.aggregate([
-              {
-                $match: {
-                  subject: subject._id,
-                  section: section,
-                  faculty: faculty._id
-                }
-              },
-              {
-                $group: {
-                  _id: null,
-                  totalStudents: { $sum: 1 },
-                  averageMarks: { $avg: '$totalCieMarks' },
-                  maxMarks: { $max: '$totalCieMarks' },
-                  minMarks: { $min: '$totalCieMarks' },
-                  passed: {
-                    $sum: {
-                      $cond: [{ $gte: ['$totalCieMarks', 24] }, 1, 0]
-                    }
-                  }
-                }
-              }
-            ]);
-
-            return {
-              section,
-              studentCount,
-              summary: marksSummary[0] || {
-                totalStudents: 0,
-                averageMarks: 0,
-                maxMarks: 0,
-                minMarks: 0,
-                passed: 0
-              }
-            };
-          })
-        );
-
-        return {
-          subject: {
-            code: subject.code,
-            name: subject.name,
-            credits: subject.credits,
-            type: subject.type
-          },
-          sections: sectionDetails,
-          handlesLab: assignment.handlesLab,
-          isElective: assignment.isElective
-        };
-      })
-    );
+      .populate('subject', 'code name credits type semester')
+      .sort({ semester: -1 });
 
     res.json({
       faculty: {
@@ -95,12 +146,14 @@ export const getFacultyProfile = async (req, res) => {
         email: faculty.email,
         mobile: faculty.mobile,
         department: faculty.department,
-        designation: faculty.designation,
-        qualifications: faculty.qualifications,
-        workload: faculty.workload
+        designation: faculty.designation
       },
-      timetable: faculty.timetable,
-      assignedSubjects: subjectsWithDetails
+      assignments: assignments.map(assignment => ({
+        subject: assignment.subject,
+        sections: assignment.sections,
+        semester: assignment.semester,
+        academicYear: assignment.academicYear
+      }))
     });
   } catch (error) {
     console.error('Get faculty profile error:', error);

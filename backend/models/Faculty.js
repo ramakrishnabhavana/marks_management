@@ -1,34 +1,40 @@
 import mongoose from 'mongoose';
 
 const facultySchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  name: { type: String, required: true },
-  email: { type: String, required: true },
-  mobile: { type: String, required: true },
-  department: { type: String, default: 'Information Technology' },
-  designation: { type: String, default: 'Assistant Professor' },
-  qualifications: [String],
-  timetable: {
-    Monday: [{
-      period: Number,
-      subject: String,
-      section: String,
-      type: String // theory/lab
-    }],
-    Tuesday: [],
-    Wednesday: [],
-    Thursday: [],
-    Friday: [],
-    Saturday: []
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    unique: true,
   },
-  workload: {
-    theory: Number,
-    practical: Number,
-    projects: Number,
-    mentor: Number,
-    others: Number,
-    total: Number
-  }
-}, { timestamps: true });
+  name: {
+    type: String,
+    required: true,
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  mobile: {
+    type: String,
+  },
+  department: {
+    type: String,
+    required: true,
+  },
+  designation: {
+    type: String,
+    required: true,
+  },
+  subjects: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subject',
+  }],
+}, {
+  timestamps: true,
+});
 
-export const Faculty = mongoose.model('Faculty', facultySchema);
+const Faculty = mongoose.model('Faculty', facultySchema);
+
+export default Faculty;

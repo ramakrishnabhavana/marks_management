@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
-import { User } from '../models/User.js';
-import { Student } from '../models/Student.js';
-import { Faculty } from '../models/Faculty.js';
+import User from '../models/User.js';
+import Student from '../models/Student.js';
+import Faculty from '../models/Faculty.js';
 
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET || 'your-secret-key', {

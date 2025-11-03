@@ -1,8 +1,9 @@
 import express from 'express';
-import { auth } from '../middleware/auth.js';
-import { authorize } from '../middleware/auth.js';
+import { auth, authorize } from '../middleware/auth.js';
 import {
   getFacultyProfile,
+  getFacultySubjects,
+  getClassStudents,
   getStudentsForSubject,
   updateStudentMarks,
   bulkUpdateMarks
@@ -14,8 +15,10 @@ router.use(auth);
 router.use(authorize('faculty'));
 
 router.get('/profile', getFacultyProfile);
+router.get('/subjects', getFacultySubjects);
+router.get('/classes/:classCode/students', getClassStudents);
 router.get('/subjects/:subjectCode/sections/:section/students', getStudentsForSubject);
 router.post('/marks/update', updateStudentMarks);
-router.post('/marks/bulk-update', bulkUpdateMarks);
+router.post('/classes/:classCode/marks/bulk', bulkUpdateMarks);
 
 export default router;
