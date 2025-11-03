@@ -16,12 +16,13 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { apiService } from "@/services/api";
 
 const FacultyDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [facultyData, setFacultyData] = useState(null);
-  const [selectedSubject, setSelectedSubject] = useState(null);
+  const [selectedClass, setSelectedClass] = useState(null);
   const [selectedTest, setSelectedTest] = useState("");
   const [bulkMarks, setBulkMarks] = useState({});
   const [students, setStudents] = useState([]);
@@ -34,17 +35,7 @@ const FacultyDashboard = () => {
 
   const fetchFacultyData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/faculty/subjects', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch faculty data');
-
-      const data = await response.json();
+      const data = await apiService.getFacultySubjects();
       setFacultyData(data);
     } catch (error) {
       console.error('Error fetching faculty data:', error);
@@ -60,17 +51,7 @@ const FacultyDashboard = () => {
 
   const fetchStudentsForClass = async (classCode) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/faculty/classes/${classCode}/students`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch students');
-
-      const data = await response.json();
+      const data = await apiService.getClassStudents(classCode);
       setStudents(data.students || []);
     } catch (error) {
       console.error('Error fetching students:', error);
@@ -85,55 +66,56 @@ const FacultyDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("userRole");
-    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userData");
     navigate("/");
   };
 
-  const handleSubjectSelect = (subject) => {
-    setSelectedSubject(subject);
+  const handleClassSelect = (classItem) => {
+    setSelectedClass(classItem);
     setSelectedTest("");
     setBulkMarks({});
-    fetchStudentsForClass(subject.classCode);
+    fetchStudentsForClass(classItem.classCode);
   };
 
   const getTestOptions = () => {
-    if (!selectedSubject) return [];
+    if (!selectedClass) return [];
 
-    // For now, assuming all subjects are theory subjects
-    // This can be enhanced based on subject type from backend
     return [
-      { value: "slipTests", label: "Slip Tests (Array)", max: 5 },
-      { value: "assignments", label: "Assignments (Array)", max: 10 },
-      { value: "classTests", label: "Class Tests (Array)", max: 20 },
-      { value: "attendanceMarks", label: "Attendance Marks", max: 5 },
+      { value: "slipTest", label: "Slip Test", max: 5 },
+      { value: "assignment", label: "Assignment", max: 10 },
+      { value: "internalTest", label: "Internal Test", max: 20 },
+      { value: "attendance", label: "Attendance", max: 5 },
     ];
   };
 
   const handleBulkMarkChange = (rollNo, value) => {
-    setBulkMarks(prev => ({ ...prev, [rollNo]: value }));
+    setBulkMarks(prev => ({ 
+      ...prev, 
+      [rollNo]: value 
+    }));
   };
 
   const handleSubmitBulkMarks = async () => {
-    if (!selectedTest || !selectedSubject) {
+    if (!selectedTest || !selectedClass) {
       toast({
         title: "Error",
-        description: "Please select a test and subject",
+        description: "Please select a test type and class",
         variant: "destructive",
       });
       return;
     }
 
     const marksToUpload = Object.entries(bulkMarks)
-      .filter(([_, value]) => value !== "" && value !== undefined)
+      .filter(([_, value]) => value !== "" && value !== undefined && !isNaN(value))
       .map(([rollNo, value]) => ({
         rollNo,
-        value: Array.isArray(value) ? value : [parseFloat(value)]
+        marks: parseFloat(value)
       }));
 
     if (marksToUpload.length === 0) {
       toast({
         title: "Error",
-        description: "Please enter marks for at least one student",
+        description: "Please enter valid marks for at least one student",
         variant: "destructive",
       });
       return;
@@ -141,20 +123,11 @@ const FacultyDashboard = () => {
 
     setUploading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/faculty/classes/${selectedSubject.classCode}/marks/bulk`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          markType: selectedTest,
-          marks: marksToUpload
-        })
-      });
-
-      if (!response.ok) throw new Error('Failed to upload marks');
+      await apiService.uploadBulkMarks(
+        selectedClass.classCode, 
+        selectedTest, 
+        marksToUpload
+      );
 
       toast({
         title: "Success",
@@ -164,12 +137,12 @@ const FacultyDashboard = () => {
       setBulkMarks({});
       setSelectedTest("");
       // Refresh students data to show updated marks
-      fetchStudentsForClass(selectedSubject.classCode);
+      fetchStudentsForClass(selectedClass.classCode);
     } catch (error) {
       console.error('Error uploading marks:', error);
       toast({
         title: "Error",
-        description: "Failed to upload marks",
+        description: error.message || "Failed to upload marks",
         variant: "destructive",
       });
     } finally {
@@ -228,9 +201,9 @@ const FacultyDashboard = () => {
                   <Card
                     key={subject.classCode}
                     className={`cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 ${
-                      selectedSubject?.classCode === subject.classCode ? "border-2 border-primary shadow-md" : "border-2 border-transparent"
+                      selectedClass?.classCode === subject.classCode ? "border-2 border-primary shadow-md" : "border-2 border-transparent"
                     }`}
-                    onClick={() => handleSubjectSelect(subject)}
+                    onClick={() => handleClassSelect(subject)}
                   >
                     <CardHeader className="pb-4">
                       <div className="flex items-start justify-between mb-2">
@@ -271,15 +244,15 @@ const FacultyDashboard = () => {
         </Card>
 
         {/* Marks Upload/View Section */}
-        {selectedSubject && (
+        {selectedClass && (
           <Card className="shadow-lg border-primary">
             <CardHeader className="pb-6">
               <CardTitle className="flex items-center gap-3 text-2xl">
                 <Upload className="w-6 h-6" />
-                Manage Marks - {selectedSubject.subjectName}
+                Manage Marks - {selectedClass.subjectName}
               </CardTitle>
               <CardDescription className="text-base mt-2">
-                {selectedSubject.subjectCode} | {selectedSubject.classCode} | Theory Subject (CIE: 40)
+                {selectedClass.subjectCode} | {selectedClass.classCode} | Theory Subject (CIE: 40)
               </CardDescription>
             </CardHeader>
             <CardContent>

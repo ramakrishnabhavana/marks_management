@@ -4,18 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GraduationCap, Users } from "lucide-react";
+import { GraduationCap, Users, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiService } from "@/services/api";
 
 const Login = () => {
   const [role, setRole] = useState(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
     if (!username || !password) {
       toast({
@@ -23,29 +26,18 @@ const Login = () => {
         description: "Please enter both username and password",
         variant: "destructive",
       });
+      setLoading(false);
       return;
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username,
-          password,
-          role
-        }),
+      const data = await apiService.login({
+        username,
+        password
+        // Note: Removed role from login - backend determines role from user data
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
-
-      // Store user info (no token needed)
+      // Store user info
       localStorage.setItem("userRole", data.user.role);
       localStorage.setItem("userData", JSON.stringify(data.user));
 
@@ -62,6 +54,8 @@ const Login = () => {
         description: error.message || "Invalid credentials",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -173,14 +167,26 @@ const Login = () => {
               />
             </div>
             <div className="space-y-3 pt-2">
-              <Button type="submit" className="w-full bg-gradient-primary hover:opacity-90">
-                Login
+              <Button
+                type="submit"
+                className="w-full bg-gradient-primary hover:opacity-90"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Logging in...
+                  </>
+                ) : (
+                  "Login"
+                )}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 className="w-full"
                 onClick={() => setRole(null)}
+                disabled={loading}
               >
                 Back to Role Selection
               </Button>

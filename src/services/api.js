@@ -22,13 +22,13 @@ class ApiService {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Request failed');
+        const errorData = await response.json().catch(() => ({ message: 'Request failed' }));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
       }
 
-      return data;
+      return await response.json();
     } catch (error) {
       console.error('API request failed:', error);
       throw error;
@@ -37,10 +37,17 @@ class ApiService {
 
   // Auth methods
   async login(credentials) {
-    return this.request('/auth/login', {
+    const data = await this.request('/auth/login', {
       method: 'POST',
       body: credentials,
     });
+
+    if (data.token) {
+      this.token = data.token;
+      localStorage.setItem('token', data.token);
+    }
+
+    return data;
   }
 
   async getCurrentUser() {
@@ -56,10 +63,20 @@ class ApiService {
     return this.request(`/faculty/classes/${classCode}/students`);
   }
 
-  async uploadBulkMarks(classCode, markType, marks) {
-    return this.request(`/faculty/classes/${classCode}/marks/bulk`, {
+  async uploadBulkMarks(classCode, markType, marksArray) {
+    const [subjectCode, section] = classCode.split('-');
+
+    return this.request('/faculty/marks/bulk-update', {
       method: 'POST',
-      body: { markType, marks },
+      body: {
+        subjectCode,
+        section,
+        markType,
+        marksArray: marksArray.map(mark => ({
+          rollNo: mark.rollNo,
+          marks: mark.marks
+        }))
+      },
     });
   }
 
