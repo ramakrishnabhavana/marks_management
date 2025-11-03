@@ -1,13 +1,6 @@
-import jwt from 'jsonwebtoken';
 import { User } from '../models/user.model.js';
 import { Faculty } from '../models/faculty.model.js';
 import { Student } from '../models/student.model.js';
-
-const generateToken = (id, role, facultyId = null, rollNo = null) => {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error('JWT_SECRET not defined');
-  return jwt.sign({ id, role, facultyId, rollNo }, secret, { expiresIn: '7d' });
-};
 
 export const login = async (req, res) => {
   try {
@@ -28,8 +21,6 @@ export const login = async (req, res) => {
     }
 
     let additional = {};
-    let facultyId = null;
-    let rollNo = null;
 
     if (role === 'faculty') {
       // Find faculty record
@@ -46,7 +37,6 @@ export const login = async (req, res) => {
       // Find student record
       const student = await Student.findOne({ user: user._id });
       if (student) {
-        rollNo = student.roll;
         additional = {
           rollNo: student.roll,
           section: student.section,
@@ -56,10 +46,7 @@ export const login = async (req, res) => {
       }
     }
 
-    const token = generateToken(user._id.toString(), user.role, facultyId, rollNo);
-
     res.json({
-      token,
       user: {
         id: user._id,
         name: user.name,

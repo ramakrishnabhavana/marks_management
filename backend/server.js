@@ -4,7 +4,7 @@ import cors from 'cors';
 import { connectDB } from './config/db.js';
 
 // Load env vars
-dotenv.config({ encoding: 'utf16le' });
+dotenv.config();
 
 // Connect to database
 connectDB();
@@ -29,9 +29,9 @@ app.get('/api/test', (req, res) => {
 });
 
 // Import routes
-import authRoutes from './routes/auth.routes.js';
-import studentRoutes from './routes/student.routes.js';
-import facultyRoutes from './routes/faculty.routes.js';
+import authRoutes from './routes/authRoutes.js';
+import studentRoutes from './routes/studentRoutes.js';
+import facultyRoutes from './routes/facultyRoutes.js';
 
 // Use routes
 app.use('/api/auth', authRoutes);

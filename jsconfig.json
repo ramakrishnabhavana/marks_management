@@ -1,15 +1,15 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "checkJs": false,
+    "target": "ES2020",
+    "module": "CommonJS",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
     "allowJs": true,
-    "jsx": "react-jsx",
-    "baseUrl": "src",
-    "paths": {
-      "*": ["*"]
-    }
+    "checkJs": false,
+    "skipLibCheck": true,
+    "types": [],                // ⛔ disables auto-included @types
+    "typeRoots": []             // ⛔ disables global type roots
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "backend"]
+  "include": ["**/*.js"],
+  "exclude": ["node_modules", "../node_modules", "../src"]
 }

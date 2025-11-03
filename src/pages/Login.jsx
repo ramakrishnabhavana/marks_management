@@ -45,8 +45,7 @@ const Login = () => {
         throw new Error(data.message || 'Login failed');
       }
 
-      // Store token and user info
-      localStorage.setItem("token", data.token);
+      // Store user info (no token needed)
       localStorage.setItem("userRole", data.user.role);
       localStorage.setItem("userData", JSON.stringify(data.user));
 

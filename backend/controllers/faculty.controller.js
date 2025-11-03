@@ -14,8 +14,7 @@ export const getFacultySubjects = async (req, res) => {
 
     // Get faculty assignments
     const assignments = await FacultyAssignment.find({ faculty: faculty._id })
-      .populate('subject')
-      .populate('sections');
+      .populate('subject');
 
     // Group by subject and sections
     const subjectsMap = new Map();

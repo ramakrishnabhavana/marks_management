@@ -1,12 +1,11 @@
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
-import { User } from '../models/user.model.js';
-import { Student } from '../models/student.model.js';
-import { Faculty } from '../models/faculty.model.js';
-import { Subject } from '../models/subject.model.js';
-import { Enrollment } from '../models/enrollments.model.js';
-import { FacultyAssignment } from '../models/faculty_assignments.model.js';
+import { User } from '../models/User.js';
+import { Student } from '../models/Student.js';
+import { Faculty } from '../models/Faculty.js';
+import { Subject } from '../models/Subject.js';
+import { Enrollment } from '../models/Enrollment.js';
+import { FacultyAssignment } from '../models/FacultyAssignment.js';
 
 dotenv.config();
 
@@ -14,26 +13,26 @@ const MONGO_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/marks_ma
 
 // Core subjects from timetable
 const coreSubjects = [
-  { code: '22CSC21', name: 'Software Engineering' },
-  { code: '22ITC08', name: 'Enterprise Application Development' },
-  { code: '22CAC17', name: 'Machine Learning' },
-  { code: '22ITC10', name: 'Computer Networks' },
-  { code: '22ITC12', name: 'Formal Languages and Automata Theory' }
+  { code: '22CSC21', name: 'Software Engineering', credits: 3, semester: 5 },
+  { code: '22ITC08', name: 'Enterprise Application Development', credits: 3, semester: 5 },
+  { code: '22CAC17', name: 'Machine Learning', credits: 3, semester: 5 },
+  { code: '22ITC10', name: 'Computer Networks', credits: 3, semester: 5 },
+  { code: '22ITC12', name: 'Formal Languages and Automata Theory', credits: 3, semester: 5 }
 ];
 
 // Elective subjects
 const electiveSubjects = [
-  { code: '22CIE55', name: 'Cyber Security', isElective: true, electivesGroup: 'PE-2' },
-  { code: '22ITE06', name: 'Software Project Management', isElective: true, electivesGroup: 'PE-2' }
+  { code: '22CIE55', name: 'Cyber Security', credits: 3, semester: 5, type: 'elective', electivesGroup: 'PE-2' },
+  { code: '22ITE06', name: 'Software Project Management', credits: 3, semester: 5, type: 'elective', electivesGroup: 'PE-2' }
 ];
 
 // Lab subjects
 const labSubjects = [
-  { code: '22CSC23', name: 'CASE Tools Lab' },
-  { code: '22ITC09', name: 'Enterprise Application Development Lab' },
-  { code: '22ITC11', name: 'Computer Networks Lab' },
-  { code: '22CAC18', name: 'Machine Learning Lab' },
-  { code: '22ITC16', name: 'Competitive Coding' }
+  { code: '22CSC23', name: 'CASE Tools Lab', credits: 2, semester: 5, type: 'lab' },
+  { code: '22ITC09', name: 'Enterprise Application Development Lab', credits: 2, semester: 5, type: 'lab' },
+  { code: '22ITC11', name: 'Computer Networks Lab', credits: 2, semester: 5, type: 'lab' },
+  { code: '22CAC18', name: 'Machine Learning Lab', credits: 2, semester: 5, type: 'lab' },
+  { code: '22ITC16', name: 'Competitive Coding', credits: 2, semester: 5, type: 'lab' }
 ];
 
 // Faculty data from your files
@@ -122,7 +121,7 @@ async function seedData() {
 
     // Clear existing data
     await User.deleteMany({});
-    await Student.deleteMany({});
+    await Student.collection.drop().catch(() => {}); // Drop collection to remove old indexes
     await Faculty.deleteMany({});
     await Subject.deleteMany({});
     await Enrollment.deleteMany({});
@@ -143,10 +142,9 @@ async function seedData() {
     // Create Faculty
     const facultyDocs = {};
     for (const fac of facultyData) {
-      const passwordHash = await bcrypt.hash(fac.name, 10);
       const user = await User.create({
         username: fac.name,
-        passwordHash,
+        password: fac.name, // plain password
         role: 'faculty',
         name: fac.name,
         email: fac.email
@@ -168,20 +166,21 @@ async function seedData() {
     for (const range of studentRanges) {
       for (let roll = range.start; roll <= range.end; roll++) {
         const rollStr = roll.toString();
-        const passwordHash = await bcrypt.hash(rollStr, 10);
 
         const user = await User.create({
           username: rollStr,
-          passwordHash,
+          password: rollStr, // plain password
           role: 'student',
           name: rollStr
         });
 
         const student = await Student.create({
           user: user._id,
-          roll: rollStr,
+          rollNo: rollStr,
+          name: rollStr,
           section: range.section,
-          year: 3
+          year: 3,
+          semester: 5
         });
 
         studentDocs[rollStr] = student;
@@ -191,6 +190,8 @@ async function seedData() {
           await Enrollment.create({
             student: student._id,
             subject: subjectDocs[coreSub.code]._id,
+            section: range.section,
+            semester: 5,
             chosenAsElective: false
           });
         }
@@ -201,7 +202,10 @@ async function seedData() {
         await Enrollment.create({
           student: student._id,
           subject: subjectDocs[electiveCode]._id,
-          chosenAsElective: true
+          section: range.section,
+          semester: 5,
+          chosenAsElective: true,
+          electiveGroup: 'PE-2'
         });
 
         console.log(`🎓 Created student: ${rollStr} (${range.section}) - Elective: ${electiveCode}`);
@@ -216,8 +220,8 @@ async function seedData() {
       { faculty: 'Dr. A. Sirisha', subject: '22CAC17', sections: ['IT-1'] },
       { faculty: 'Dr. B. Harish Goud', subject: '22ITC10', sections: ['IT-1'] },
       { faculty: 'Mr. R. Govardhan Reddy', subject: '22ITC12', sections: ['IT-1'] },
-      { faculty: 'Mr. U. Sai Ram', subject: '22CIE55', sections: ['IT-1'] },
-      { faculty: 'Mr. R. Sai Venkat', subject: '22ITE06', sections: ['IT-1'] },
+      { faculty: 'Mr. U. Sai Ram', subject: '22CIE55', sections: ['IT-1'], isElective: true },
+      { faculty: 'Mr. R. Sai Venkat', subject: '22ITE06', sections: ['IT-1'], isElective: true },
 
       // Lab assignments
       { faculty: 'Mrs. E. Rama Lakshmi', subject: '22CSC23', sections: ['IT-1'], handlesLab: true },
@@ -233,7 +237,9 @@ async function seedData() {
           faculty: facultyDocs[assignment.faculty]._id,
           subject: subjectDocs[assignment.subject]._id,
           sections: assignment.sections,
-          handlesLab: assignment.handlesLab || false
+          semester: 5,
+          handlesLab: assignment.handlesLab || false,
+          isElective: assignment.isElective || false
         });
         console.log(`📋 Created assignment: ${assignment.faculty} -> ${assignment.subject}`);
       }

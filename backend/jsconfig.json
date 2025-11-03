@@ -4,7 +4,10 @@
     "module": "CommonJS",
     "esModuleInterop": true,
     "moduleResolution": "node",
-    "allowJs": true
+    "allowJs": true,
+    "checkJs": false,
+    "types": [],               // 👈 prevents auto-loading of @types/*
+    "skipLibCheck": true       // 👈 ignores type definition checks
   },
   "include": ["**/*.js"],
   "exclude": ["node_modules", "../node_modules", "../src"]
