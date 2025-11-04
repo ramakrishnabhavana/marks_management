@@ -64,15 +64,38 @@ const StudentDashboard = () => {
 
   const calculateCIETotal = (subject) => {
     if (subject.type === "theory") {
-      const slipTestTotal = subject.marks.slipTests.reduce((a, b) => a + b, 0);
-      const assignmentTotal = subject.marks.assignments.reduce((a, b) => a + b, 0);
-      const classTestTotal = subject.marks.classTests.reduce((a, b) => a + b, 0);
-      const attendance = subject.marks.attendance;
-      return slipTestTotal + assignmentTotal + classTestTotal + attendance;
+      // CIE = (sliptest1 + sliptest2 + sliptest3) - min(sliptest1, sliptest2, sliptest3) + (assignment1 + assignment2)/2 + (classtest1 + classtest2)/2 + attendance
+      const slipTests = subject.marks.slipTests;
+      let slipTestContribution = 0;
+      if (slipTests.length >= 3) {
+        const minSlipTest = Math.min(...slipTests);
+        slipTestContribution = slipTests.reduce((a, b) => a + b, 0) - minSlipTest;
+      } else if (slipTests.length === 2) {
+        slipTestContribution = slipTests.reduce((a, b) => a + b, 0);
+      } else if (slipTests.length === 1) {
+        slipTestContribution = slipTests[0];
+      }
+
+      const assignmentAvg = subject.marks.assignments.length > 0
+        ? subject.marks.assignments.reduce((a, b) => a + b, 0) / subject.marks.assignments.length
+        : 0;
+
+      const classTestAvg = subject.marks.classTests.length > 0
+        ? subject.marks.classTests.reduce((a, b) => a + b, 0) / subject.marks.classTests.length
+        : 0;
+
+      const attendance = subject.marks.attendance || 0;
+      return parseFloat((slipTestContribution + assignmentAvg + classTestAvg + attendance).toFixed(2));
     } else {
-      const weeklyCIETotal = subject.marks.weeklyCIE.reduce((a, b) => a + b, 0);
-      const internalTestTotal = subject.marks.internalTests.reduce((a, b) => a + b, 0);
-      return weeklyCIETotal + internalTestTotal;
+      // Average of weekly CIE marks (contributes to 30 marks)
+      const weeklyCIEAvg = subject.marks.weeklyCIE.length > 0
+        ? subject.marks.weeklyCIE.reduce((a, b) => a + b, 0) / subject.marks.weeklyCIE.length
+        : 0;
+      // Average of internal tests (contributes to 20 marks)
+      const internalTestAvg = subject.marks.internalTests.length > 0
+        ? subject.marks.internalTests.reduce((a, b) => a + b, 0) / subject.marks.internalTests.length
+        : 0;
+      return parseFloat((weeklyCIEAvg + internalTestAvg).toFixed(2));
     }
   };
 

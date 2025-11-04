@@ -159,26 +159,35 @@ export const getClassStudents = async (req, res) => {
         let marksSummary = {};
         if (marks) {
           if (subject.type === 'theory') {
-            // Calculate averages for theory subjects
-            const slipTests = [marks.slipTest1, marks.slipTest2, marks.slipTest3].filter(m => m !== null);
-            const bestSlipTests = slipTests.sort((a, b) => b - a).slice(0, 2);
-            const slipTestAvg = bestSlipTests.length > 0 ?
-              bestSlipTests.reduce((a, b) => a + b, 0) / bestSlipTests.length : 0;
+            // Calculate CIE as per formula: (sliptest1 + sliptest2 + sliptest3) - min(sliptest1, sliptest2, sliptest3) + (assignment1 + assignment2)/2 + (classtest1 + classtest2)/2 + attendance
+            const slipTests = [marks.slipTest1, marks.slipTest2, marks.slipTest3].filter(m => m !== null && m !== undefined);
+            let slipTestContribution = 0;
+            if (slipTests.length >= 3) {
+              const minSlipTest = Math.min(...slipTests);
+              slipTestContribution = slipTests.reduce((a, b) => a + b, 0) - minSlipTest;
+            } else if (slipTests.length === 2) {
+              slipTestContribution = slipTests.reduce((a, b) => a + b, 0);
+            } else if (slipTests.length === 1) {
+              slipTestContribution = slipTests[0];
+            }
 
-            const assignments = [marks.assignment1, marks.assignment2].filter(m => m !== null);
+            const assignments = [marks.assignment1, marks.assignment2].filter(m => m !== null && m !== undefined);
             const assignmentAvg = assignments.length > 0 ?
               assignments.reduce((a, b) => a + b, 0) / assignments.length : 0;
 
-            const classTests = [marks.classTest1, marks.classTest2].filter(m => m !== null);
+            const classTests = [marks.classTest1, marks.classTest2].filter(m => m !== null && m !== undefined);
             const classTestAvg = classTests.length > 0 ?
               classTests.reduce((a, b) => a + b, 0) / classTests.length : 0;
 
+            const attendance = marks.attendance || 0;
+            const totalMarks = slipTestContribution + assignmentAvg + classTestAvg + attendance;
+
             marksSummary = {
-              slipTestAverage: parseFloat(slipTestAvg.toFixed(2)),
+              slipTestContribution: parseFloat(slipTestContribution.toFixed(2)),
               assignmentAverage: parseFloat(assignmentAvg.toFixed(2)),
               classTestAverage: parseFloat(classTestAvg.toFixed(2)),
-              attendance: marks.attendance || 0,
-              totalMarks: slipTestAvg + assignmentAvg + classTestAvg + (marks.attendance || 0)
+              attendance: attendance,
+              totalMarks: parseFloat(totalMarks.toFixed(2))
             };
           } else {
             // Calculate averages for lab subjects

@@ -80,10 +80,15 @@ const FacultyDashboard = () => {
   const getTestOptions = () => {
     if (!selectedClass) return [];
 
+    // Options for theory subjects
     return [
-      { value: "slipTest", label: "Slip Test", max: 5 },
-      { value: "assignment", label: "Assignment", max: 10 },
-      { value: "internalTest", label: "Internal Test", max: 20 },
+      { value: "sliptest1", label: "Slip Test 1", max: 5 },
+      { value: "sliptest2", label: "Slip Test 2", max: 5 },
+      { value: "sliptest3", label: "Slip Test 3", max: 5 },
+      { value: "assignment1", label: "Assignment 1", max: 10 },
+      { value: "assignment2", label: "Assignment 2", max: 10 },
+      { value: "classtest1", label: "Class Test 1", max: 20 },
+      { value: "classtest2", label: "Class Test 2", max: 20 },
       { value: "attendance", label: "Attendance", max: 5 },
     ];
   };
@@ -357,19 +362,19 @@ const FacultyDashboard = () => {
                       <div className="bg-muted px-6 py-4 grid grid-cols-6 gap-4 font-semibold text-sm">
                         <div>Roll No</div>
                         <div>Name</div>
-                        <div>Slip Test Avg</div>
+                        <div>Slip Test Contribution</div>
                         <div>Assignment Avg</div>
-                        <div>Internal Test Avg</div>
-                        <div>Total</div>
+                        <div>Class Test Avg</div>
+                        <div>Total CIE</div>
                       </div>
                       <div className="divide-y">
                         {students.map((student) => (
                           <div key={student.rollNo} className="px-6 py-4 grid grid-cols-6 gap-4 items-center hover:bg-muted/50 transition-colors text-sm">
                             <div className="font-medium">{student.rollNo}</div>
                             <div>{student.name}</div>
-                            <div>{student.marks?.slipTestAverage || 0}</div>
+                            <div>{student.marks?.slipTestContribution || 0}</div>
                             <div>{student.marks?.assignmentAverage || 0}</div>
-                            <div>{student.marks?.internalTestAverage || 0}</div>
+                            <div>{student.marks?.classTestAverage || 0}</div>
                             <div className="font-semibold text-primary">{student.marks?.totalMarks || 0}</div>
                           </div>
                         ))}
