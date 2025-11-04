@@ -64,14 +64,13 @@ class ApiService {
   }
 
   async uploadBulkMarks(classCode, markType, marksArray) {
-    const [subjectCode, section] = classCode.split('-');
-
+    // Send the whole classCode to the backend and let it parse subject/section
+    // robustly. This avoids client-side parsing errors when codes contain '-'.
     return this.request('/faculty/marks/bulk-update', {
       method: 'POST',
       body: {
-        subjectCode,
-        section,
-        markType,
+        classCode,
+        markType: markType.toLowerCase().replace(/\s+/g, ''),
         marksArray: marksArray.map(mark => ({
           rollNo: mark.rollNo,
           marks: mark.marks

@@ -359,7 +359,7 @@ const FacultyDashboard = () => {
                         <div>Name</div>
                         <div>Slip Test Avg</div>
                         <div>Assignment Avg</div>
-                        <div>Class Test Avg</div>
+                        <div>Internal Test Avg</div>
                         <div>Total</div>
                       </div>
                       <div className="divide-y">
@@ -369,7 +369,7 @@ const FacultyDashboard = () => {
                             <div>{student.name}</div>
                             <div>{student.marks?.slipTestAverage || 0}</div>
                             <div>{student.marks?.assignmentAverage || 0}</div>
-                            <div>{student.marks?.classTestAverage || 0}</div>
+                            <div>{student.marks?.internalTestAverage || 0}</div>
                             <div className="font-semibold text-primary">{student.marks?.totalMarks || 0}</div>
                           </div>
                         ))}

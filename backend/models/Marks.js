@@ -31,49 +31,31 @@ const marksSchema = new mongoose.Schema({
   },
 
   // Theory subject marks
-  slipTests: [{
-    testNumber: Number,
-    marks: Number,
-    maxMarks: { type: Number, default: 5 },
-    date: { type: Date, default: Date.now },
-    topic: String,
-  }],
-  assignments: [{
-    assignmentNumber: Number,
-    marks: Number,
-    maxMarks: { type: Number, default: 10 },
-    date: { type: Date, default: Date.now },
-    topic: String,
-  }],
-  internalTests: [{
-    testNumber: Number,
-    marks: Number,
-    maxMarks: { type: Number, default: 20 },
-    date: { type: Date, default: Date.now },
-    topic: String,
-  }],
+  slipTest1: { type: Number, default: null },
+  slipTest2: { type: Number, default: null },
+  slipTest3: { type: Number, default: null },
+  assignment1: { type: Number, default: null },
+  assignment2: { type: Number, default: null },
+  classTest1: { type: Number, default: null },
+  classTest2: { type: Number, default: null },
+  attendance: { type: Number, default: null },
 
   // Lab subject marks
-  labRecords: [{
-    experiment: String,
-    marks: Number,
-    maxMarks: { type: Number, default: 5 },
-    date: { type: Date, default: Date.now },
-  }],
-  labTests: [{
-    testNumber: Number,
-    marks: Number,
-    maxMarks: { type: Number, default: 10 },
-    date: { type: Date, default: Date.now },
-  }],
+  weeklyCIE1: { type: Number, default: null },
+  weeklyCIE2: { type: Number, default: null },
+  weeklyCIE3: { type: Number, default: null },
+  weeklyCIE4: { type: Number, default: null },
+  weeklyCIE5: { type: Number, default: null },
+  weeklyCIE6: { type: Number, default: null },
+  weeklyCIE7: { type: Number, default: null },
+  weeklyCIE8: { type: Number, default: null },
+  weeklyCIE9: { type: Number, default: null },
+  weeklyCIE10: { type: Number, default: null },
+  internalTest1: { type: Number, default: null },
+  internalTest2: { type: Number, default: null },
 
   // Attendance marks (applicable to both theory and lab)
-  attendance: {
-    classesHeld: { type: Number, default: 0 },
-    classesAttended: { type: Number, default: 0 },
-    marks: { type: Number, default: 0 },
-    lastUpdated: { type: Date, default: Date.now },
-  },
+  // (kept as single field above)
 
   // Final assessment
   grade: {

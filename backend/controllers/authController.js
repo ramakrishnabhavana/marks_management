@@ -14,10 +14,12 @@ export const login = async (req, res) => {
     const { username, password } = req.body;
 
     // Find user by username (roll number for students, email/name for faculty)
+    // Allow login by username, email or full name to accommodate front-end input
     const user = await User.findOne({
       $or: [
         { username: username },
-        { email: username }
+        { email: username },
+        { name: username }
       ]
     });
 

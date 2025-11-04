@@ -19,6 +19,6 @@ router.get('/subjects', getFacultySubjects);
 router.get('/classes/:classCode/students', getClassStudents);
 router.get('/subjects/:subjectCode/sections/:section/students', getStudentsForSubject);
 router.post('/marks/update', updateStudentMarks);
-router.post('/classes/:classCode/marks/bulk', bulkUpdateMarks);
+router.post('/marks/bulk-update', bulkUpdateMarks); // FIXED THIS LINE
 
 export default router;

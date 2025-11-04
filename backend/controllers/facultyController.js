@@ -7,34 +7,64 @@ import FacultyAssignment from '../models/FacultyAssignment.js';
 
 export const getFacultySubjects = async (req, res) => {
   try {
-    const faculty = await Faculty.findOne({ user: req.user.id });
-    if (!faculty) return res.status(404).json({ message: 'Faculty not found' });
+    console.log('Fetching faculty subjects for user:', req.user.id);
 
-    // Get faculty assignments with student counts
+    const faculty = await Faculty.findOne({ user: req.user.id });
+    if (!faculty) {
+      console.log('Faculty not found for user:', req.user.id);
+      return res.status(404).json({ message: 'Faculty not found' });
+    }
+
+    console.log('Found faculty:', faculty.name);
+
+    // Get faculty assignments with student details
     const assignments = await FacultyAssignment.find({ faculty: faculty._id })
-      .populate('subject', 'code name credits type')
-      .populate('sections');
+      .populate('subject', 'code name credits type');
+
+    console.log('Faculty assignments found:', assignments.length);
 
     const subjectsWithDetails = await Promise.all(
       assignments.map(async (assignment) => {
-        const studentCount = await Enrollment.countDocuments({
-          subject: assignment.subject._id,
-          section: { $in: assignment.sections }
-        });
+        // Get students for each section
+        const sectionDetails = await Promise.all(
+          assignment.sections.map(async (section) => {
+            const enrollments = await Enrollment.find({
+              subject: assignment.subject._id,
+              section: section
+            }).populate('student', 'rollNo name');
+
+            const students = enrollments.map(enrollment => ({
+              rollNo: enrollment.student.rollNo,
+              name: enrollment.student.name
+            }));
+
+            return {
+              section,
+              studentCount: students.length,
+              students
+            };
+          })
+        );
+
+        // Use the first section for class code
+        const primarySection = assignment.sections[0];
+        const primarySectionDetail = sectionDetails.find(sd => sd.section === primarySection);
 
         return {
-          classCode: `${assignment.subject.code}-${assignment.sections[0]}`,
+          classCode: `${assignment.subject.code}-${primarySection}`,
           subjectCode: assignment.subject.code,
           subjectName: assignment.subject.name,
           credits: assignment.subject.credits,
           type: assignment.subject.type,
-          sections: assignment.sections,
-          studentCount,
+          sections: sectionDetails,
+          studentCount: primarySectionDetail?.studentCount || 0,
+          students: primarySectionDetail?.students || [],
           semester: assignment.semester
         };
       })
     );
 
+    console.log('Sending faculty subjects response');
     res.json({
       faculty: {
         name: faculty.name,
@@ -44,14 +74,54 @@ export const getFacultySubjects = async (req, res) => {
     });
   } catch (error) {
     console.error('Get faculty subjects error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error: ' + error.message });
   }
 };
 
 export const getClassStudents = async (req, res) => {
   try {
     const { classCode } = req.params;
-    const [subjectCode, section] = classCode.split('-');
+    console.log('Fetching students for class:', classCode);
+
+    // classCode is constructed as `${subject.code}-${section}`, but both
+    // subject.code and section may contain hyphens. To reliably parse, try
+    // every possible split position at '-' and check which left-hand side
+    // corresponds to a Subject.code in the database.
+    let subjectCode = null;
+    let section = null;
+
+    if (typeof classCode !== 'string') {
+      return res.status(400).json({ message: 'Invalid classCode' });
+    }
+
+    // collect indices of dashes
+    const dashIndices = [];
+    for (let i = 0; i < classCode.length; i++) {
+      if (classCode[i] === '-') dashIndices.push(i);
+    }
+
+    // try splits at each dash from left to right (prefer shortest subject code)
+    for (const idx of dashIndices) {
+      const candidateSub = classCode.slice(0, idx);
+      const candidateSection = classCode.slice(idx + 1);
+      // check if the subject exists for this candidate
+      // we don't `await` here yet in loop body; but we need to query DB synchronously
+      // so do an awaited lookup
+      // eslint-disable-next-line no-await-in-loop
+      const found = await Subject.findOne({ code: candidateSub });
+      if (found) {
+        subjectCode = candidateSub;
+        section = candidateSection;
+        break;
+      }
+    }
+
+    // If none matched, return bad request
+    if (!subjectCode) {
+      return res.status(400).json({ message: 'Unable to parse classCode or subject not found' });
+    }
+
+    console.log('Parsed - Subject:', subjectCode, 'Section:', section);
 
     const faculty = await Faculty.findOne({ user: req.user.id });
     if (!faculty) return res.status(404).json({ message: 'Faculty not found' });
@@ -67,14 +137,17 @@ export const getClassStudents = async (req, res) => {
     });
 
     if (!assignment) {
+      console.log('Faculty not authorized for this class');
       return res.status(403).json({ message: 'Not authorized for this class' });
     }
 
-    // Get enrolled students with their marks
+    // Get enrolled students
     const enrollments = await Enrollment.find({
       subject: subject._id,
       section: section
     }).populate('student', 'rollNo name');
+
+    console.log('Enrollments found:', enrollments.length);
 
     const studentsWithMarks = await Promise.all(
       enrollments.map(async (enrollment) => {
@@ -84,32 +157,78 @@ export const getClassStudents = async (req, res) => {
         });
 
         let marksSummary = {};
-        if (marks && subject.type === 'theory') {
-          const slipTestAvg = marks.slipTests.length > 0 ?
-            marks.slipTests.reduce((a, b) => a + b.marks, 0) / marks.slipTests.length : 0;
+        if (marks) {
+          if (subject.type === 'theory') {
+            // Calculate averages for theory subjects
+            const slipTests = [marks.slipTest1, marks.slipTest2, marks.slipTest3].filter(m => m !== null);
+            const bestSlipTests = slipTests.sort((a, b) => b - a).slice(0, 2);
+            const slipTestAvg = bestSlipTests.length > 0 ?
+              bestSlipTests.reduce((a, b) => a + b, 0) / bestSlipTests.length : 0;
 
-          const assignmentAvg = marks.assignments.length > 0 ?
-            marks.assignments.reduce((a, b) => a + b.marks, 0) / marks.assignments.length : 0;
+            const assignments = [marks.assignment1, marks.assignment2].filter(m => m !== null);
+            const assignmentAvg = assignments.length > 0 ?
+              assignments.reduce((a, b) => a + b, 0) / assignments.length : 0;
 
-          const internalTestAvg = marks.internalTests.length > 0 ?
-            marks.internalTests.reduce((a, b) => a + b.marks, 0) / marks.internalTests.length : 0;
+            const classTests = [marks.classTest1, marks.classTest2].filter(m => m !== null);
+            const classTestAvg = classTests.length > 0 ?
+              classTests.reduce((a, b) => a + b, 0) / classTests.length : 0;
 
-          marksSummary = {
-            slipTestAverage: parseFloat(slipTestAvg.toFixed(2)),
-            assignmentAverage: parseFloat(assignmentAvg.toFixed(2)),
-            internalTestAverage: parseFloat(internalTestAvg.toFixed(2)),
-            totalMarks: slipTestAvg + assignmentAvg + internalTestAvg + (marks.attendance?.marks || 0)
-          };
+            marksSummary = {
+              slipTestAverage: parseFloat(slipTestAvg.toFixed(2)),
+              assignmentAverage: parseFloat(assignmentAvg.toFixed(2)),
+              classTestAverage: parseFloat(classTestAvg.toFixed(2)),
+              attendance: marks.attendance || 0,
+              totalMarks: slipTestAvg + assignmentAvg + classTestAvg + (marks.attendance || 0)
+            };
+          } else {
+            // Calculate averages for lab subjects
+            const weeklyCIEs = [
+              marks.weeklyCIE1, marks.weeklyCIE2, marks.weeklyCIE3, marks.weeklyCIE4, marks.weeklyCIE5,
+              marks.weeklyCIE6, marks.weeklyCIE7, marks.weeklyCIE8, marks.weeklyCIE9, marks.weeklyCIE10
+            ].filter(m => m !== null);
+            const weeklyAvg = weeklyCIEs.length > 0 ?
+              weeklyCIEs.reduce((a, b) => a + b, 0) / weeklyCIEs.length : 0;
+
+            const internalTests = [marks.internalTest1, marks.internalTest2].filter(m => m !== null);
+            const internalTestAvg = internalTests.length > 0 ?
+              internalTests.reduce((a, b) => a + b, 0) / internalTests.length : 0;
+
+            marksSummary = {
+              weeklyAverage: parseFloat(weeklyAvg.toFixed(2)),
+              internalTestAverage: parseFloat(internalTestAvg.toFixed(2)),
+              attendance: marks.attendance || 0,
+              totalMarks: weeklyAvg + internalTestAvg + (marks.attendance || 0)
+            };
+          }
+        } else {
+          // Default empty marks
+          if (subject.type === 'theory') {
+            marksSummary = {
+              slipTestAverage: 0,
+              assignmentAverage: 0,
+              classTestAverage: 0,
+              attendance: 0,
+              totalMarks: 0
+            };
+          } else {
+            marksSummary = {
+              weeklyAverage: 0,
+              internalTestAverage: 0,
+              attendance: 0,
+              totalMarks: 0
+            };
+          }
         }
 
         return {
           rollNo: enrollment.student.rollNo,
           name: enrollment.student.name,
-          marks: marks ? { ...marksSummary } : null
+          marks: marksSummary
         };
       })
     );
 
+    console.log('Sending students response');
     res.json({
       subject: {
         code: subject.code,
@@ -121,7 +240,7 @@ export const getClassStudents = async (req, res) => {
     });
   } catch (error) {
     console.error('Get class students error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error: ' + error.message });
   }
 };
 
@@ -201,23 +320,28 @@ export const getStudentsForSubject = async (req, res) => {
 
       // Calculate current averages and totals
       let marksSummary = {};
+
       if (studentMarks) {
+        // Prefer flat fields (slipTest1..3, assignment1..2, internalTest1..2) which match Marks.js
         if (subject.type === 'theory') {
-          const slipTestAvg = studentMarks.slipTests.length > 0 ?
-            studentMarks.slipTests.reduce((a, b) => a + b.marks, 0) / studentMarks.slipTests.length : 0;
+          const slipTests = [studentMarks.slipTest1, studentMarks.slipTest2, studentMarks.slipTest3].filter(m => m !== null && m !== undefined);
+          const slipTestAvg = slipTests.length > 0 ? slipTests.reduce((a, b) => a + b, 0) / slipTests.length : 0;
 
-          const assignmentAvg = studentMarks.assignments.length > 0 ?
-            studentMarks.assignments.reduce((a, b) => a + b.marks, 0) / studentMarks.assignments.length : 0;
+          const assignments = [studentMarks.assignment1, studentMarks.assignment2].filter(m => m !== null && m !== undefined);
+          const assignmentAvg = assignments.length > 0 ? assignments.reduce((a, b) => a + b, 0) / assignments.length : 0;
 
-          const internalTestAvg = studentMarks.internalTests.length > 0 ?
-            studentMarks.internalTests.reduce((a, b) => a + b.marks, 0) / studentMarks.internalTests.length : 0;
+          const internalTests = [studentMarks.internalTest1, studentMarks.internalTest2].filter(m => m !== null && m !== undefined);
+          const internalTestAvg = internalTests.length > 0 ? internalTests.reduce((a, b) => a + b, 0) / internalTests.length : 0;
+
+          // attendance might be a number (bulk upload) or an object (legacy). Handle both.
+          const attendanceMark = (typeof studentMarks.attendance === 'number') ? studentMarks.attendance : (studentMarks.attendance?.marks || 0);
 
           marksSummary = {
             slipTestAverage: parseFloat(slipTestAvg.toFixed(2)),
             assignmentAverage: parseFloat(assignmentAvg.toFixed(2)),
             internalTestAverage: parseFloat(internalTestAvg.toFixed(2)),
-            attendanceMark: studentMarks.attendance?.marks || 0,
-            totalMark: slipTestAvg + assignmentAvg + internalTestAvg + (studentMarks.attendance?.marks || 0)
+            attendanceMark: attendanceMark || 0,
+            totalMark: slipTestAvg + assignmentAvg + internalTestAvg + (attendanceMark || 0)
           };
         }
       }
@@ -228,18 +352,49 @@ export const getStudentsForSubject = async (req, res) => {
           chosenAsElective: enrollment.chosenAsElective,
           electiveGroup: enrollment.electiveGroup
         },
-        marks: studentMarks ? {
-          slipTests: studentMarks.slipTests,
-          assignments: studentMarks.assignments,
-          internalTests: studentMarks.internalTests,
-          labRecords: studentMarks.labRecords,
-          labTests: studentMarks.labTests,
-          attendance: studentMarks.attendance,
-          ...marksSummary,
-          grade: studentMarks.grade,
-          remarks: studentMarks.remarks,
-          lastUpdated: studentMarks.lastUpdated
-        } : null
+        marks: studentMarks ? (function() {
+          // build array-shaped representation from flat fields so front-end that expects arrays still works
+          const slipTestsArr = [];
+          [1,2,3].forEach(i => {
+            const v = studentMarks[`slipTest${i}`];
+            if (v !== null && v !== undefined) slipTestsArr.push({ testNumber: i, marks: v });
+          });
+
+          const assignmentsArr = [];
+          [1,2].forEach(i => {
+            const v = studentMarks[`assignment${i}`];
+            if (v !== null && v !== undefined) assignmentsArr.push({ assignmentNumber: i, marks: v });
+          });
+
+          const internalTestsArr = [];
+          [1,2].forEach(i => {
+            const v = studentMarks[`internalTest${i}`];
+            if (v !== null && v !== undefined) internalTestsArr.push({ testNumber: i, marks: v });
+          });
+
+          // weekly CIEs (lab records)
+          const labRecordsArr = [];
+          for (let i=1;i<=10;i++){
+            const v = studentMarks[`weeklyCIE${i}`];
+            if (v !== null && v !== undefined) labRecordsArr.push({ experiment: `weeklyCIE${i}`, marks: v });
+          }
+
+          // labTests map to internalTest fields where applicable
+          const labTestsArr = internalTestsArr.slice();
+
+          return {
+            slipTests: slipTestsArr,
+            assignments: assignmentsArr,
+            internalTests: internalTestsArr,
+            labRecords: labRecordsArr,
+            labTests: labTestsArr,
+            attendance: studentMarks.attendance,
+            ...marksSummary,
+            grade: studentMarks.grade,
+            remarks: studentMarks.remarks,
+            lastUpdated: studentMarks.lastUpdated
+          };
+        })() : null
       };
     });
 
@@ -305,61 +460,59 @@ export const updateStudentMarks = async (req, res) => {
     }
 
     // Update specific mark type based on faculty selection
+    // Use flat fields that exist on Marks schema (slipTest1..3, assignment1..2, internalTest1..2, weeklyCIE1..10)
+    const setNextOrNumbered = (fieldPrefix, maxSlots = 3, testNumber) => {
+      if (testNumber) {
+        const field = `${fieldPrefix}${testNumber}`;
+        marks[field] = marksData.marks;
+        return;
+      }
+
+      // pick first empty slot
+      for (let i = 1; i <= maxSlots; i++) {
+        const field = `${fieldPrefix}${i}`;
+        if (marks[field] === null || marks[field] === undefined) {
+          marks[field] = marksData.marks;
+          return;
+        }
+      }
+
+      // overwrite the last slot if all full
+      marks[`${fieldPrefix}${maxSlots}`] = marksData.marks;
+    };
+
     switch (markType) {
       case 'slipTest':
-        marks.slipTests.push({
-          testNumber: marks.slipTests.length + 1,
-          marks: marksData.marks,
-          maxMarks: marksData.maxMarks || 5,
-          date: new Date(),
-          topic: marksData.topic || `Slip Test ${marks.slipTests.length + 1}`
-        });
+        // marksData.testNumber (1..3) optional
+        setNextOrNumbered('slipTest', 3, marksData.testNumber);
         break;
 
       case 'assignment':
-        marks.assignments.push({
-          assignmentNumber: marks.assignments.length + 1,
-          marks: marksData.marks,
-          maxMarks: marksData.maxMarks || 10,
-          date: new Date(),
-          topic: marksData.topic || `Assignment ${marks.assignments.length + 1}`
-        });
+        setNextOrNumbered('assignment', 2, marksData.testNumber);
         break;
 
       case 'internalTest':
-        marks.internalTests.push({
-          testNumber: marks.internalTests.length + 1,
-          marks: marksData.marks,
-          maxMarks: marksData.maxMarks || 20,
-          date: new Date(),
-          topic: marksData.topic || `Internal Test ${marks.internalTests.length + 1}`
-        });
+        setNextOrNumbered('internalTest', 2, marksData.testNumber);
         break;
 
       case 'attendance':
-        marks.attendance = {
-          ...marks.attendance,
-          ...marksData,
-          lastUpdated: new Date()
-        };
+        // accept numeric attendance or object with .marks
+        if (typeof marksData.marks === 'number') {
+          marks.attendance = marksData.marks;
+        } else {
+          // keep legacy object shape if provided
+          marks.attendance = { ...(marks.attendance || {}), ...marksData, lastUpdated: new Date() };
+        }
         break;
 
       case 'labRecord':
-        marks.labRecords.push({
-          experiment: marksData.experiment || `Experiment ${marks.labRecords.length + 1}`,
-          marks: marksData.marks,
-          maxMarks: marksData.maxMarks || 5,
-          date: new Date()
-        });
+        // map to weeklyCIE slots (1..10)
+        setNextOrNumbered('weeklyCIE', 10, marksData.testNumber);
         break;
 
       case 'labTest':
-        marks.labTests.push({
-          testNumber: marks.labTests.length + 1,
-          marks: marksData.marks,
-          maxMarks: marksData.maxMarks || 10,
-          date: new Date()
-        });
+        // map to internalTest slots for lab tests if applicable
+        setNextOrNumbered('internalTest', 2, marksData.testNumber);
         break;
 
       default:
@@ -390,7 +543,38 @@ export const updateStudentMarks = async (req, res) => {
 
 export const bulkUpdateMarks = async (req, res) => {
   try {
-    const { subjectCode, section, markType, marksArray } = req.body;
+    // Accept either { subjectCode, section } or { classCode } from client.
+    let { subjectCode, section, markType, marksArray, classCode } = req.body;
+
+    // If client sent classCode, try parsing it into subjectCode and section by
+    // attempting splits and checking Subject existence (same strategy as
+    // getClassStudents).
+    if (!subjectCode && classCode) {
+      if (typeof classCode !== 'string') {
+        return res.status(400).json({ message: 'Invalid classCode' });
+      }
+
+      const dashIndices = [];
+      for (let i = 0; i < classCode.length; i++) {
+        if (classCode[i] === '-') dashIndices.push(i);
+      }
+
+      for (const idx of dashIndices) {
+        const candidateSub = classCode.slice(0, idx);
+        const candidateSection = classCode.slice(idx + 1);
+        // eslint-disable-next-line no-await-in-loop
+        const found = await Subject.findOne({ code: candidateSub });
+        if (found) {
+          subjectCode = candidateSub;
+          section = candidateSection;
+          break;
+        }
+      }
+
+      if (!subjectCode) {
+        return res.status(400).json({ message: 'Unable to parse classCode or subject not found' });
+      }
+    }
 
     const faculty = await Faculty.findOne({ user: req.user.id });
     if (!faculty) return res.status(404).json({ message: 'Faculty not found' });
@@ -432,43 +616,68 @@ export const bulkUpdateMarks = async (req, res) => {
 
       // Add marks based on type
       switch (markType) {
-        case 'slipTest':
-          marks.slipTests.push({
-            testNumber: marks.slipTests.length + 1,
-            marks: markData.marks,
-            maxMarks: 5,
-            date: new Date(),
-            topic: `Slip Test ${marks.slipTests.length + 1}`
-          });
+        case 'sliptest1':
+          marks.slipTest1 = markData.marks;
           break;
-
-        case 'assignment':
-          marks.assignments.push({
-            assignmentNumber: marks.assignments.length + 1,
-            marks: markData.marks,
-            maxMarks: 10,
-            date: new Date(),
-            topic: `Assignment ${marks.assignments.length + 1}`
-          });
+        case 'sliptest2':
+          marks.slipTest2 = markData.marks;
           break;
-
-        case 'internalTest':
-          marks.internalTests.push({
-            testNumber: marks.internalTests.length + 1,
-            marks: markData.marks,
-            maxMarks: 20,
-            date: new Date(),
-            topic: `Internal Test ${marks.internalTests.length + 1}`
-          });
+        case 'sliptest3':
+          marks.slipTest3 = markData.marks;
           break;
-
+        case 'assignment1':
+          marks.assignment1 = markData.marks;
+          break;
+        case 'assignment2':
+          marks.assignment2 = markData.marks;
+          break;
+        case 'classtest1':
+          marks.classTest1 = markData.marks;
+          break;
+        case 'classtest2':
+          marks.classTest2 = markData.marks;
+          break;
         case 'attendance':
-          marks.attendance = {
-            classesHeld: markData.classesHeld || marks.attendance?.classesHeld || 0,
-            classesAttended: markData.classesAttended || marks.attendance?.classesAttended || 0,
-            lastUpdated: new Date()
-          };
+          marks.attendance = markData.marks;
           break;
+        case 'weeklycie1':
+          marks.weeklyCIE1 = markData.marks;
+          break;
+        case 'weeklycie2':
+          marks.weeklyCIE2 = markData.marks;
+          break;
+        case 'weeklycie3':
+          marks.weeklyCIE3 = markData.marks;
+          break;
+        case 'weeklycie4':
+          marks.weeklyCIE4 = markData.marks;
+          break;
+        case 'weeklycie5':
+          marks.weeklyCIE5 = markData.marks;
+          break;
+        case 'weeklycie6':
+          marks.weeklyCIE6 = markData.marks;
+          break;
+        case 'weeklycie7':
+          marks.weeklyCIE7 = markData.marks;
+          break;
+        case 'weeklycie8':
+          marks.weeklyCIE8 = markData.marks;
+          break;
+        case 'weeklycie9':
+          marks.weeklyCIE9 = markData.marks;
+          break;
+        case 'weeklycie10':
+          marks.weeklyCIE10 = markData.marks;
+          break;
+        case 'internaltest1':
+          marks.internalTest1 = markData.marks;
+          break;
+        case 'internaltest2':
+          marks.internalTest2 = markData.marks;
+          break;
+        default:
+          throw new Error(`Invalid mark type: ${markType}`);
       }
 
       marks.lastUpdated = new Date();
