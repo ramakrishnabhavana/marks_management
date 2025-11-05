@@ -212,25 +212,25 @@ export const getStudentMarksBySubject = async (req, res) => {
         });
         const assignmentAvg = assignmentsArr.length > 0 ? assignmentsArr.reduce((a,b) => a + b.marks, 0) / assignmentsArr.length : 0;
 
-        const internalArr = [];
+        const classTestsArr = [];
         [1,2].forEach(i => {
-          const v = marks[`internalTest${i}`];
-          if (v !== null && v !== undefined) internalArr.push({ testNumber: i, marks: v });
+          const v = marks[`classTest${i}`];
+          if (v !== null && v !== undefined) classTestsArr.push({ testNumber: i, marks: v });
         });
-        const internalTestAvg = internalArr.length > 0 ? internalArr.reduce((a,b) => a + b.marks, 0) / internalArr.length : 0;
+        const classTestAvg = classTestsArr.length > 0 ? classTestsArr.reduce((a,b) => a + b.marks, 0) / classTestsArr.length : 0;
 
         const attendanceMark = (typeof marks.attendance === 'number') ? marks.attendance : (marks.attendance?.marks || 0);
 
-        totalCieMarks = slipTestAvg + assignmentAvg + internalTestAvg + (attendanceMark || 0);
+        totalCieMarks = slipTestAvg + assignmentAvg + classTestAvg + (attendanceMark || 0);
 
         marksBreakdown = {
           slipTests: slipTestsArr,
           assignments: assignmentsArr,
-          internalTests: internalArr,
+          classTests: classTestsArr,
           attendance: marks.attendance,
           slipTestAverage: parseFloat(slipTestAvg.toFixed(2)),
           assignmentAverage: parseFloat(assignmentAvg.toFixed(2)),
-          internalTestAverage: parseFloat(internalTestAvg.toFixed(2)),
+          classTestAverage: parseFloat(classTestAvg.toFixed(2)),
           bestTwoSlipTests: bestSlipTests
         };
       } else if (subject.type === 'lab') {

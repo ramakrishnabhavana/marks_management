@@ -163,34 +163,12 @@ export const getClassStudents = async (req, res) => {
         let marksSummary = {};
         if (marks) {
           if (subject.type === 'theory') {
-            // Calculate CIE as per formula: (sliptest1 + sliptest2 + sliptest3) - min(sliptest1, sliptest2, sliptest3) + (assignment1 + assignment2)/2 + (classtest1 + classtest2)/2 + attendance
-            const slipTests = [marks.slipTest1, marks.slipTest2, marks.slipTest3].filter(m => m !== null && m !== undefined);
-            let slipTestContribution = 0;
-            if (slipTests.length >= 3) {
-              const minSlipTest = Math.min(...slipTests);
-              slipTestContribution = slipTests.reduce((a, b) => a + b, 0) - minSlipTest;
-            } else if (slipTests.length === 2) {
-              slipTestContribution = slipTests.reduce((a, b) => a + b, 0);
-            } else if (slipTests.length === 1) {
-              slipTestContribution = slipTests[0];
-            }
-
-            const assignments = [marks.assignment1, marks.assignment2].filter(m => m !== null && m !== undefined);
-            const assignmentAvg = assignments.length > 0 ?
-              assignments.reduce((a, b) => a + b, 0) / assignments.length : 0;
-
-            const classTests = [marks.classTest1, marks.classTest2].filter(m => m !== null && m !== undefined);
-            const classTestAvg = classTests.length > 0 ?
-              classTests.reduce((a, b) => a + b, 0) / classTests.length : 0;
-
-            const attendance = marks.attendance || 0;
-            const totalMarks = slipTestContribution + assignmentAvg + classTestAvg + attendance;
+            // Calculate total as sum of all individual marks
+            const totalMarks = (marks.slipTest1 || 0) + (marks.slipTest2 || 0) + (marks.slipTest3 || 0) +
+                               (marks.assignment1 || 0) + (marks.assignment2 || 0) +
+                               (marks.classTest1 || 0) + (marks.classTest2 || 0) + (marks.attendance || 0);
 
             marksSummary = {
-              slipTestContribution: parseFloat(slipTestContribution.toFixed(2)),
-              assignmentAverage: parseFloat(assignmentAvg.toFixed(2)),
-              classTestAverage: parseFloat(classTestAvg.toFixed(2)),
-              attendance: attendance,
               totalMarks: parseFloat(totalMarks.toFixed(2)),
               // Include individual marks for input population
               slipTest1: marks.slipTest1 || null,
@@ -199,26 +177,24 @@ export const getClassStudents = async (req, res) => {
               assignment1: marks.assignment1 || null,
               assignment2: marks.assignment2 || null,
               classTest1: marks.classTest1 || null,
-              classTest2: marks.classTest2 || null
+              classTest2: marks.classTest2 || null,
+              attendance: marks.attendance || null
             };
           } else {
-            // Calculate averages for lab subjects
+            // Calculate total as sum for lab subjects
             const weeklyCIEs = [
               marks.weeklyCIE1, marks.weeklyCIE2, marks.weeklyCIE3, marks.weeklyCIE4, marks.weeklyCIE5,
               marks.weeklyCIE6, marks.weeklyCIE7, marks.weeklyCIE8, marks.weeklyCIE9, marks.weeklyCIE10
             ].filter(m => m !== null);
-            const weeklyAvg = weeklyCIEs.length > 0 ?
-              weeklyCIEs.reduce((a, b) => a + b, 0) / weeklyCIEs.length : 0;
+            const weeklySum = weeklyCIEs.reduce((a, b) => a + b, 0);
 
             const internalTests = [marks.internalTest1, marks.internalTest2].filter(m => m !== null);
-            const internalTestAvg = internalTests.length > 0 ?
-              internalTests.reduce((a, b) => a + b, 0) / internalTests.length : 0;
+            const internalSum = internalTests.reduce((a, b) => a + b, 0);
+
+            const totalMarks = weeklySum + internalSum + (marks.attendance || 0);
 
             marksSummary = {
-              weeklyAverage: parseFloat(weeklyAvg.toFixed(2)),
-              internalTestAverage: parseFloat(internalTestAvg.toFixed(2)),
-              attendance: marks.attendance || 0,
-              totalMarks: weeklyAvg + internalTestAvg + (marks.attendance || 0),
+              totalMarks: parseFloat(totalMarks.toFixed(2)),
               // Include individual marks for lab subjects
               weeklyCIE1: marks.weeklyCIE1 || null,
               weeklyCIE2: marks.weeklyCIE2 || null,
@@ -231,17 +207,14 @@ export const getClassStudents = async (req, res) => {
               weeklyCIE9: marks.weeklyCIE9 || null,
               weeklyCIE10: marks.weeklyCIE10 || null,
               internalTest1: marks.internalTest1 || null,
-              internalTest2: marks.internalTest2 || null
+              internalTest2: marks.internalTest2 || null,
+              attendance: marks.attendance || null
             };
           }
         } else {
           // Default empty marks
           if (subject.type === 'theory') {
             marksSummary = {
-              slipTestContribution: 0,
-              assignmentAverage: 0,
-              classTestAverage: 0,
-              attendance: 0,
               totalMarks: 0,
               slipTest1: null,
               slipTest2: null,
@@ -249,13 +222,11 @@ export const getClassStudents = async (req, res) => {
               assignment1: null,
               assignment2: null,
               classTest1: null,
-              classTest2: null
+              classTest2: null,
+              attendance: null
             };
           } else {
             marksSummary = {
-              weeklyAverage: 0,
-              internalTestAverage: 0,
-              attendance: 0,
               totalMarks: 0,
               weeklyCIE1: null,
               weeklyCIE2: null,
@@ -268,7 +239,8 @@ export const getClassStudents = async (req, res) => {
               weeklyCIE9: null,
               weeklyCIE10: null,
               internalTest1: null,
-              internalTest2: null
+              internalTest2: null,
+              attendance: null
             };
           }
         }

@@ -82,9 +82,21 @@ const FacultyDashboard = () => {
 
   // Populate bulkMarks with existing marks when test is selected
   const populateBulkMarksForTest = (testType) => {
+    const fieldMapping = {
+      sliptest1: 'slipTest1',
+      sliptest2: 'slipTest2',
+      sliptest3: 'slipTest3',
+      assignment1: 'assignment1',
+      assignment2: 'assignment2',
+      classtest1: 'classTest1',
+      classtest2: 'classTest2',
+      attendance: 'attendance'
+    };
+
+    const field = fieldMapping[testType];
     const newBulkMarks = {};
     students.forEach(student => {
-      const existingMark = student.marks?.[testType];
+      const existingMark = student.marks?.[field];
       if (existingMark !== null && existingMark !== undefined) {
         newBulkMarks[student.rollNo] = existingMark.toString();
       }
