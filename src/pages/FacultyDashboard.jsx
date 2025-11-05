@@ -535,23 +535,33 @@ const FacultyDashboard = () => {
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold">Student Marks Overview</h3>
                     <div className="border rounded-lg overflow-hidden shadow-sm">
-                      <div className="bg-muted px-6 py-4 grid grid-cols-6 gap-4 font-semibold text-sm">
+                      <div className="bg-muted px-6 py-4 grid grid-cols-[120px_1fr_repeat(9,60px)] gap-2 font-semibold text-sm">
                         <div>Roll No</div>
                         <div>Name</div>
-                        <div>Slip Test Contribution</div>
-                        <div>Assignment Avg</div>
-                        <div>Class Test Avg</div>
-                        <div>Total CIE</div>
+                        <div className="text-center">ST1</div>
+                        <div className="text-center">ST2</div>
+                        <div className="text-center">ST3</div>
+                        <div className="text-center">A1</div>
+                        <div className="text-center">A2</div>
+                        <div className="text-center">CT1</div>
+                        <div className="text-center">CT2</div>
+                        <div className="text-center">Atd</div>
+                        <div className="text-center">CIE</div>
                       </div>
                       <div className="divide-y">
                         {students.map((student) => (
-                          <div key={student.rollNo} className="px-6 py-4 grid grid-cols-6 gap-4 items-center hover:bg-muted/50 transition-colors text-sm">
+                          <div key={student.rollNo} className="px-6 py-4 grid grid-cols-[120px_1fr_repeat(9,60px)] gap-2 items-center hover:bg-muted/50 transition-colors text-sm">
                             <div className="font-medium">{student.rollNo}</div>
                             <div>{student.name}</div>
-                            <div>{student.marks?.slipTestContribution || 0}</div>
-                            <div>{student.marks?.assignmentAverage || 0}</div>
-                            <div>{student.marks?.classTestAverage || 0}</div>
-                            <div className="font-semibold text-primary">{student.marks?.totalMarks || 0}</div>
+                            <div className="text-center">{student.marks?.slipTest1 || 0}</div>
+                            <div className="text-center">{student.marks?.slipTest2 || 0}</div>
+                            <div className="text-center">{student.marks?.slipTest3 || 0}</div>
+                            <div className="text-center">{student.marks?.assignment1 || 0}</div>
+                            <div className="text-center">{student.marks?.assignment2 || 0}</div>
+                            <div className="text-center">{student.marks?.classTest1 || 0}</div>
+                            <div className="text-center">{student.marks?.classTest2 || 0}</div>
+                            <div className="text-center">{student.marks?.attendance || 0}</div>
+                            <div className="text-center font-semibold text-primary">{student.marks?.totalMarks || 0}</div>
                           </div>
                         ))}
                       </div>
