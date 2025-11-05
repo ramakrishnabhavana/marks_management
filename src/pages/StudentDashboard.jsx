@@ -260,22 +260,24 @@ const StudentDashboard = () => {
                       </div>
                     </div>
 
-                    <div className="space-y-4">
-                      <h3 className="font-semibold text-lg flex items-center gap-2 text-primary">
-                        <Calendar className="w-5 h-5" />
-                        Attendance (Max 5)
-                      </h3>
-                      <Card className="bg-muted/30 border-muted max-w-xs">
-                        <CardContent className="pt-6 pb-6 text-center">
-                          <p className="text-sm text-muted-foreground mb-2 font-medium">Attendance Marks</p>
-                          <p className="text-3xl font-bold text-primary">
-                            {typeof selectedSubject.marks.attendance === 'number'
-                              ? selectedSubject.marks.attendance
-                              : (selectedSubject.marks.attendance?.marks || 0)}/5
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </div>
+                    {selectedSubject.marks.attendance != null && (
+                      <div className="space-y-4">
+                        <h3 className="font-semibold text-lg flex items-center gap-2 text-primary">
+                          <Calendar className="w-5 h-5" />
+                          Attendance (Max 5)
+                        </h3>
+                        <Card className="bg-muted/30 border-muted max-w-xs">
+                          <CardContent className="pt-6 pb-6 text-center">
+                            <p className="text-sm text-muted-foreground mb-2 font-medium">Attendance Marks</p>
+                            <p className="text-3xl font-bold text-primary">
+                              {typeof selectedSubject.marks.attendance === 'number'
+                                ? selectedSubject.marks.attendance
+                                : (selectedSubject.marks.attendance?.marks || 0)}/5
+                            </p>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <>

@@ -163,10 +163,19 @@ export const getClassStudents = async (req, res) => {
         let marksSummary = {};
         if (marks) {
           if (subject.type === 'theory') {
-            // Calculate total as sum of all individual marks
-            const totalMarks = (marks.slipTest1 || 0) + (marks.slipTest2 || 0) + (marks.slipTest3 || 0) +
-                               (marks.assignment1 || 0) + (marks.assignment2 || 0) +
-                               (marks.classTest1 || 0) + (marks.classTest2 || 0) + (marks.attendance || 0);
+            // Calculate CIE marks according to the specified rules
+            const slipTests = [marks.slipTest1, marks.slipTest2, marks.slipTest3].filter(m => m !== null && m !== undefined);
+            const bestSlipTests = slipTests.slice().sort((a, b) => b - a).slice(0, 2);
+            const slipTestAvg = bestSlipTests.length > 0 ? bestSlipTests.reduce((a, b) => a + b, 0) / bestSlipTests.length : 0;
+
+            const assignments = [marks.assignment1, marks.assignment2].filter(m => m !== null && m !== undefined);
+            const assignmentAvg = assignments.length > 0 ? assignments.reduce((a, b) => a + b, 0) / assignments.length : 0;
+
+            const classTests = [marks.classTest1, marks.classTest2].filter(m => m !== null && m !== undefined);
+            const classTestAvg = classTests.length > 0 ? classTests.reduce((a, b) => a + b, 0) / classTests.length : 0;
+
+            const attendanceMark = (typeof marks.attendance === 'number') ? marks.attendance : (marks.attendance?.marks || 0);
+            const totalMarks = slipTestAvg + assignmentAvg + classTestAvg + (attendanceMark || 0);
 
             marksSummary = {
               totalMarks: parseFloat(totalMarks.toFixed(2)),
@@ -347,16 +356,17 @@ export const getStudentsForSubject = async (req, res) => {
       let marksSummary = {};
 
       if (studentMarks) {
-        // Prefer flat fields (slipTest1..3, assignment1..2, internalTest1..2) which match Marks.js
+        // Prefer flat fields (slipTest1..3, assignment1..2, classTest1..2) which match Marks.js
         if (subject.type === 'theory') {
           const slipTests = [studentMarks.slipTest1, studentMarks.slipTest2, studentMarks.slipTest3].filter(m => m !== null && m !== undefined);
-          const slipTestAvg = slipTests.length > 0 ? slipTests.reduce((a, b) => a + b, 0) / slipTests.length : 0;
+          const bestSlipTests = slipTests.slice().sort((a, b) => b - a).slice(0, 2);
+          const slipTestAvg = bestSlipTests.length > 0 ? bestSlipTests.reduce((a, b) => a + b, 0) / bestSlipTests.length : 0;
 
           const assignments = [studentMarks.assignment1, studentMarks.assignment2].filter(m => m !== null && m !== undefined);
           const assignmentAvg = assignments.length > 0 ? assignments.reduce((a, b) => a + b, 0) / assignments.length : 0;
 
-          const internalTests = [studentMarks.internalTest1, studentMarks.internalTest2].filter(m => m !== null && m !== undefined);
-          const internalTestAvg = internalTests.length > 0 ? internalTests.reduce((a, b) => a + b, 0) / internalTests.length : 0;
+          const classTests = [studentMarks.classTest1, studentMarks.classTest2].filter(m => m !== null && m !== undefined);
+          const classTestAvg = classTests.length > 0 ? classTests.reduce((a, b) => a + b, 0) / classTests.length : 0;
 
           // attendance might be a number (bulk upload) or an object (legacy). Handle both.
           const attendanceMark = (typeof studentMarks.attendance === 'number') ? studentMarks.attendance : (studentMarks.attendance?.marks || 0);
@@ -364,9 +374,9 @@ export const getStudentsForSubject = async (req, res) => {
           marksSummary = {
             slipTestAverage: parseFloat(slipTestAvg.toFixed(2)),
             assignmentAverage: parseFloat(assignmentAvg.toFixed(2)),
-            internalTestAverage: parseFloat(internalTestAvg.toFixed(2)),
+            classTestAverage: parseFloat(classTestAvg.toFixed(2)),
             attendanceMark: attendanceMark || 0,
-            totalMark: slipTestAvg + assignmentAvg + internalTestAvg + (attendanceMark || 0)
+            totalMark: slipTestAvg + assignmentAvg + classTestAvg + (attendanceMark || 0)
           };
         }
       }

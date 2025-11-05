@@ -129,7 +129,7 @@ export const getStudentProfile = async (req, res) => {
           slipTests: [],
           assignments: [],
           internalTests: [],
-          attendance: { marks: 0, classesHeld: 0, classesAttended: 0 },
+          attendance: null,
           slipTestAverage: 0,
           assignmentAverage: 0,
           internalTestAverage: 0,
