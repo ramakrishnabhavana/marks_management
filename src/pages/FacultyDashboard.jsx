@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Users, BookOpen, Upload, Eye, Loader2 } from "lucide-react";
+import { LogOut, Users, BookOpen, Upload, Eye, Loader2, FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -28,6 +28,8 @@ const FacultyDashboard = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [excelFile, setExcelFile] = useState(null);
+  const [excelUploading, setExcelUploading] = useState(false);
 
   useEffect(() => {
     fetchFacultyData();
@@ -74,6 +76,7 @@ const FacultyDashboard = () => {
     setSelectedClass(classItem);
     setSelectedTest("");
     setBulkMarks({});
+    setExcelFile(null);
     fetchStudentsForClass(classItem.classCode);
   };
 
@@ -106,9 +109,9 @@ const FacultyDashboard = () => {
   };
 
   const handleBulkMarkChange = (rollNo, value) => {
-    setBulkMarks(prev => ({ 
-      ...prev, 
-      [rollNo]: value 
+    setBulkMarks(prev => ({
+      ...prev,
+      [rollNo]: value
     }));
   };
 
@@ -141,8 +144,8 @@ const FacultyDashboard = () => {
     setUploading(true);
     try {
       await apiService.uploadBulkMarks(
-        selectedClass.classCode, 
-        selectedTest, 
+        selectedClass.classCode,
+        selectedTest,
         marksToUpload
       );
 
@@ -164,6 +167,85 @@ const FacultyDashboard = () => {
       });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleExcelFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel'
+      ];
+
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Error",
+          description: "Please select a valid Excel file (.xlsx or .xls)",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Error",
+          description: "File size must be less than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setExcelFile(file);
+    }
+  };
+
+  const handleExcelUpload = async () => {
+    if (!excelFile || !selectedTest || !selectedClass) {
+      toast({
+        title: "Error",
+        description: "Please select a test type, class, and Excel file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setExcelUploading(true);
+    try {
+      const result = await apiService.uploadExcelMarks(
+        selectedClass.classCode,
+        selectedTest,
+        excelFile
+      );
+
+      toast({
+        title: "Success",
+        description: `Excel marks uploaded successfully. Processed ${result.processed} students.`,
+      });
+
+      if (result.errors && result.errors.length > 0) {
+        toast({
+          title: "Warning",
+          description: `Some entries had errors: ${result.errors.join(', ')}`,
+          variant: "destructive",
+        });
+      }
+
+      setExcelFile(null);
+      setSelectedTest("");
+      // Refresh students data to show updated marks
+      fetchStudentsForClass(selectedClass.classCode);
+    } catch (error) {
+      console.error('Error uploading Excel marks:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload Excel marks",
+        variant: "destructive",
+      });
+    } finally {
+      setExcelUploading(false);
     }
   };
 
@@ -274,10 +356,14 @@ const FacultyDashboard = () => {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="upload" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 h-12">
+                <TabsList className="grid w-full grid-cols-3 h-12">
                   <TabsTrigger value="upload" className="text-base">
                     <Upload className="w-4 h-4 mr-2" />
-                    Upload Marks
+                    Manual Upload
+                  </TabsTrigger>
+                  <TabsTrigger value="excel" className="text-base">
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Excel Upload
                   </TabsTrigger>
                   <TabsTrigger value="view" className="text-base">
                     <Eye className="w-4 h-4 mr-2" />
@@ -368,6 +454,81 @@ const FacultyDashboard = () => {
                       </div>
                     </div>
                   )}
+                </TabsContent>
+
+                <TabsContent value="excel" className="space-y-6 mt-8">
+                  {/* Excel Upload Section */}
+                  <div className="space-y-6">
+                    <div className="bg-blue-50 p-5 rounded-lg border border-blue-200">
+                      <h3 className="font-semibold text-lg mb-2 text-blue-900">Excel File Upload</h3>
+                      <p className="text-sm text-blue-700 mb-4">
+                        Upload student marks from an Excel file. The file should have columns named "Roll No" and "Marks".
+                      </p>
+                      <div className="text-xs text-blue-600">
+                        <p>• Supported formats: .xlsx, .xls</p>
+                        <p>• Maximum file size: 5MB</p>
+                        <p>• First sheet will be processed</p>
+                      </div>
+                    </div>
+
+                    {/* Test Selection for Excel */}
+                    <div className="space-y-3">
+                      <Label htmlFor="excel-test" className="text-base font-semibold">Select Test/Assessment for Excel Upload</Label>
+                      <Select value={selectedTest} onValueChange={setSelectedTest}>
+                        <SelectTrigger className="h-12 text-base">
+                          <SelectValue placeholder="Choose a test type for Excel upload" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getTestOptions().map(test => (
+                            <SelectItem key={test.value} value={test.value} className="text-base">
+                              {test.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* File Upload */}
+                    <div className="space-y-3">
+                      <Label htmlFor="excel-file" className="text-base font-semibold">Select Excel File</Label>
+                      <div className="flex items-center gap-4">
+                        <Input
+                          id="excel-file"
+                          type="file"
+                          accept=".xlsx,.xls"
+                          onChange={handleExcelFileChange}
+                          className="flex-1"
+                        />
+                        {excelFile && (
+                          <div className="text-sm text-muted-foreground">
+                            {excelFile.name} ({(excelFile.size / 1024 / 1024).toFixed(2)} MB)
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Upload Button */}
+                    <div className="pt-2">
+                      <Button
+                        onClick={handleExcelUpload}
+                        disabled={excelUploading || !excelFile || !selectedTest}
+                        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 h-12 text-base"
+                        size="lg"
+                      >
+                        {excelUploading ? (
+                          <>
+                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                            Uploading Excel...
+                          </>
+                        ) : (
+                          <>
+                            <FileSpreadsheet className="w-5 h-5 mr-2" />
+                            Upload Excel Marks
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="view" className="space-y-4 mt-8">

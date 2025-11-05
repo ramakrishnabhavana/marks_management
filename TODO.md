@@ -1,3 +1,15 @@
-# TODO: Update Student Dashboard Subjects
+# TODO: Implement Excel Upload for Faculty Marks
 
-- [x] Update the subjects array in mockStudentData to include all 11 subjects (6 theory, 5 labs) with appropriate course codes, types, credits, maxCIE, and sample marks.
+## Backend Changes
+- [x] Install multer and xlsx dependencies in backend/package.json
+- [x] Add uploadExcelMarks function in backend/controllers/facultyController.js
+- [x] Add POST /faculty/marks/upload-excel route in backend/routes/facultyRoutes.js
+
+## Frontend Changes
+- [x] Add uploadExcelMarks method in src/services/api.js
+- [x] Update FacultyDashboard.jsx to include Excel file upload UI in the upload tab
+- [x] Handle file selection, markType selection, and upload process
+
+## Testing
+- [ ] Test Excel parsing and data saving to MongoDB
+- [ ] Verify error handling for invalid files or data

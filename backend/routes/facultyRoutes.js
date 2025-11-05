@@ -6,7 +6,9 @@ import {
   getClassStudents,
   getStudentsForSubject,
   updateStudentMarks,
-  bulkUpdateMarks
+  bulkUpdateMarks,
+  uploadExcelMarks,
+  upload
 } from '../controllers/facultyController.js';
 
 const router = express.Router();
@@ -19,6 +21,7 @@ router.get('/subjects', getFacultySubjects);
 router.get('/classes/:classCode/students', getClassStudents);
 router.get('/subjects/:subjectCode/sections/:section/students', getStudentsForSubject);
 router.post('/marks/update', updateStudentMarks);
-router.post('/marks/bulk-update', bulkUpdateMarks); // FIXED THIS LINE
+router.post('/marks/bulk-update', bulkUpdateMarks);
+router.post('/marks/upload-excel', upload.single('excelFile'), uploadExcelMarks);
 
 export default router;

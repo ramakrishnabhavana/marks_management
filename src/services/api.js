@@ -16,7 +16,7 @@ class ApiService {
       ...options,
     };
 
-    if (options.body) {
+    if (options.body && !(options.body instanceof FormData)) {
       config.body = JSON.stringify(options.body);
     }
 
@@ -75,6 +75,22 @@ class ApiService {
           rollNo: mark.rollNo,
           marks: mark.marks
         }))
+      },
+    });
+  }
+
+  async uploadExcelMarks(classCode, markType, file) {
+    const formData = new FormData();
+    formData.append('excelFile', file);
+    formData.append('classCode', classCode);
+    formData.append('markType', markType.toLowerCase().replace(/\s+/g, ''));
+
+    return this.request('/faculty/marks/upload-excel', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        // Let browser set Content-Type with boundary for FormData
+        ...this.token && { 'Authorization': `Bearer ${this.token}` }
       },
     });
   }
