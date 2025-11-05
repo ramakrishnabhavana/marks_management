@@ -187,7 +187,15 @@ export const getClassStudents = async (req, res) => {
               assignmentAverage: parseFloat(assignmentAvg.toFixed(2)),
               classTestAverage: parseFloat(classTestAvg.toFixed(2)),
               attendance: attendance,
-              totalMarks: parseFloat(totalMarks.toFixed(2))
+              totalMarks: parseFloat(totalMarks.toFixed(2)),
+              // Include individual marks for input population
+              slipTest1: marks.slipTest1 || null,
+              slipTest2: marks.slipTest2 || null,
+              slipTest3: marks.slipTest3 || null,
+              assignment1: marks.assignment1 || null,
+              assignment2: marks.assignment2 || null,
+              classTest1: marks.classTest1 || null,
+              classTest2: marks.classTest2 || null
             };
           } else {
             // Calculate averages for lab subjects
@@ -206,25 +214,57 @@ export const getClassStudents = async (req, res) => {
               weeklyAverage: parseFloat(weeklyAvg.toFixed(2)),
               internalTestAverage: parseFloat(internalTestAvg.toFixed(2)),
               attendance: marks.attendance || 0,
-              totalMarks: weeklyAvg + internalTestAvg + (marks.attendance || 0)
+              totalMarks: weeklyAvg + internalTestAvg + (marks.attendance || 0),
+              // Include individual marks for lab subjects
+              weeklyCIE1: marks.weeklyCIE1 || null,
+              weeklyCIE2: marks.weeklyCIE2 || null,
+              weeklyCIE3: marks.weeklyCIE3 || null,
+              weeklyCIE4: marks.weeklyCIE4 || null,
+              weeklyCIE5: marks.weeklyCIE5 || null,
+              weeklyCIE6: marks.weeklyCIE6 || null,
+              weeklyCIE7: marks.weeklyCIE7 || null,
+              weeklyCIE8: marks.weeklyCIE8 || null,
+              weeklyCIE9: marks.weeklyCIE9 || null,
+              weeklyCIE10: marks.weeklyCIE10 || null,
+              internalTest1: marks.internalTest1 || null,
+              internalTest2: marks.internalTest2 || null
             };
           }
         } else {
           // Default empty marks
           if (subject.type === 'theory') {
             marksSummary = {
-              slipTestAverage: 0,
+              slipTestContribution: 0,
               assignmentAverage: 0,
               classTestAverage: 0,
               attendance: 0,
-              totalMarks: 0
+              totalMarks: 0,
+              slipTest1: null,
+              slipTest2: null,
+              slipTest3: null,
+              assignment1: null,
+              assignment2: null,
+              classTest1: null,
+              classTest2: null
             };
           } else {
             marksSummary = {
               weeklyAverage: 0,
               internalTestAverage: 0,
               attendance: 0,
-              totalMarks: 0
+              totalMarks: 0,
+              weeklyCIE1: null,
+              weeklyCIE2: null,
+              weeklyCIE3: null,
+              weeklyCIE4: null,
+              weeklyCIE5: null,
+              weeklyCIE6: null,
+              weeklyCIE7: null,
+              weeklyCIE8: null,
+              weeklyCIE9: null,
+              weeklyCIE10: null,
+              internalTest1: null,
+              internalTest2: null
             };
           }
         }

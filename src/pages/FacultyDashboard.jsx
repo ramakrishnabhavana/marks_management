@@ -77,6 +77,18 @@ const FacultyDashboard = () => {
     fetchStudentsForClass(classItem.classCode);
   };
 
+  // Populate bulkMarks with existing marks when test is selected
+  const populateBulkMarksForTest = (testType) => {
+    const newBulkMarks = {};
+    students.forEach(student => {
+      const existingMark = student.marks?.[testType];
+      if (existingMark !== null && existingMark !== undefined) {
+        newBulkMarks[student.rollNo] = existingMark.toString();
+      }
+    });
+    setBulkMarks(newBulkMarks);
+  };
+
   const getTestOptions = () => {
     if (!selectedClass) return [];
 
@@ -277,7 +289,10 @@ const FacultyDashboard = () => {
                   {/* Test Selection */}
                   <div className="space-y-3">
                     <Label htmlFor="test" className="text-base font-semibold">Select Test/Assessment</Label>
-                    <Select value={selectedTest} onValueChange={setSelectedTest}>
+                    <Select value={selectedTest} onValueChange={(value) => {
+                      setSelectedTest(value);
+                      populateBulkMarksForTest(value);
+                    }}>
                       <SelectTrigger className="h-12 text-base">
                         <SelectValue placeholder="Choose a test to upload marks" />
                       </SelectTrigger>
