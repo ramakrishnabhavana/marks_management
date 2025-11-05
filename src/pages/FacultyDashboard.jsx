@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Users, BookOpen, Upload, Eye, Loader2, FileSpreadsheet } from "lucide-react";
+import { LogOut, Users, BookOpen, Upload, Eye, Loader2, FileSpreadsheet, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -247,6 +247,68 @@ const FacultyDashboard = () => {
     } finally {
       setExcelUploading(false);
     }
+  };
+
+  const downloadMarksAsCSV = () => {
+    if (!students || students.length === 0) {
+      toast({
+        title: "Error",
+        description: "No student data available to download",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Prepare CSV headers
+    const headers = [
+      "Roll No",
+      "Student Name",
+      "Slip Test 1",
+      "Slip Test 2",
+      "Slip Test 3",
+      "Assignment 1",
+      "Assignment 2",
+      "Class Test 1",
+      "Class Test 2",
+      "Attendance",
+      "Total CIE Marks"
+    ];
+
+    // Prepare CSV rows
+    const rows = students.map(student => [
+      student.rollNo,
+      student.name,
+      student.marks?.slipTest1 || 0,
+      student.marks?.slipTest2 || 0,
+      student.marks?.slipTest3 || 0,
+      student.marks?.assignment1 || 0,
+      student.marks?.assignment2 || 0,
+      student.marks?.classTest1 || 0,
+      student.marks?.classTest2 || 0,
+      student.marks?.attendance || 0,
+      student.marks?.totalMarks || 0
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(field => `"${field}"`).join(","))
+      .join("\n");
+
+    // Create and trigger download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${selectedClass.subjectCode}_${selectedClass.classCode}_marks.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Success",
+      description: "Marks downloaded successfully as CSV",
+    });
   };
 
   if (loading) {
@@ -533,7 +595,17 @@ const FacultyDashboard = () => {
 
                 <TabsContent value="view" className="space-y-4 mt-8">
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Student Marks Overview</h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">Student Marks Overview</h3>
+                      <Button
+                        onClick={downloadMarksAsCSV}
+                        variant="outline"
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download Marks
+                      </Button>
+                    </div>
                     <div className="border rounded-lg overflow-hidden shadow-sm">
                       <div className="bg-muted px-6 py-4 grid grid-cols-[120px_1fr_repeat(9,60px)] gap-2 font-semibold text-sm">
                         <div>Roll No</div>
