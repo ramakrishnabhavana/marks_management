@@ -4,6 +4,10 @@ import Subject from '../models/Subject.js';
 import Marks from '../models/Marks.js';
 import Enrollment from '../models/Enrollment.js';
 import FacultyAssignment from '../models/FacultyAssignment.js';
+import xlsx from 'xlsx';
+import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
 
 export const getFacultySubjects = async (req, res) => {
   try {
@@ -159,63 +163,93 @@ export const getClassStudents = async (req, res) => {
         let marksSummary = {};
         if (marks) {
           if (subject.type === 'theory') {
-            // Calculate averages for theory subjects
-            const slipTests = [marks.slipTest1, marks.slipTest2, marks.slipTest3].filter(m => m !== null);
-            const bestSlipTests = slipTests.sort((a, b) => b - a).slice(0, 2);
-            const slipTestAvg = bestSlipTests.length > 0 ?
-              bestSlipTests.reduce((a, b) => a + b, 0) / bestSlipTests.length : 0;
+            // Calculate CIE marks according to the specified rules
+            const slipTests = [marks.slipTest1, marks.slipTest2, marks.slipTest3].filter(m => m !== null && m !== undefined);
+            const bestSlipTests = slipTests.slice().sort((a, b) => b - a).slice(0, 2);
+            const slipTestAvg = bestSlipTests.length > 0 ? bestSlipTests.reduce((a, b) => a + b, 0) / bestSlipTests.length : 0;
 
-            const assignments = [marks.assignment1, marks.assignment2].filter(m => m !== null);
-            const assignmentAvg = assignments.length > 0 ?
-              assignments.reduce((a, b) => a + b, 0) / assignments.length : 0;
+            const assignments = [marks.assignment1, marks.assignment2].filter(m => m !== null && m !== undefined);
+            const assignmentAvg = assignments.length > 0 ? assignments.reduce((a, b) => a + b, 0) / assignments.length : 0;
 
-            const classTests = [marks.classTest1, marks.classTest2].filter(m => m !== null);
-            const classTestAvg = classTests.length > 0 ?
-              classTests.reduce((a, b) => a + b, 0) / classTests.length : 0;
+            const classTests = [marks.classTest1, marks.classTest2].filter(m => m !== null && m !== undefined);
+            const classTestAvg = classTests.length > 0 ? classTests.reduce((a, b) => a + b, 0) / classTests.length : 0;
+
+            const attendanceMark = (typeof marks.attendance === 'number') ? marks.attendance : (marks.attendance?.marks || 0);
+            const totalMarks = slipTestAvg + assignmentAvg + classTestAvg + (attendanceMark || 0);
 
             marksSummary = {
-              slipTestAverage: parseFloat(slipTestAvg.toFixed(2)),
-              assignmentAverage: parseFloat(assignmentAvg.toFixed(2)),
-              classTestAverage: parseFloat(classTestAvg.toFixed(2)),
-              attendance: marks.attendance || 0,
-              totalMarks: slipTestAvg + assignmentAvg + classTestAvg + (marks.attendance || 0)
+              totalMarks: parseFloat(totalMarks.toFixed(2)),
+              // Include individual marks for input population
+              slipTest1: marks.slipTest1 || null,
+              slipTest2: marks.slipTest2 || null,
+              slipTest3: marks.slipTest3 || null,
+              assignment1: marks.assignment1 || null,
+              assignment2: marks.assignment2 || null,
+              classTest1: marks.classTest1 || null,
+              classTest2: marks.classTest2 || null,
+              attendance: marks.attendance || null
             };
           } else {
-            // Calculate averages for lab subjects
+            // Calculate total as sum for lab subjects
             const weeklyCIEs = [
               marks.weeklyCIE1, marks.weeklyCIE2, marks.weeklyCIE3, marks.weeklyCIE4, marks.weeklyCIE5,
               marks.weeklyCIE6, marks.weeklyCIE7, marks.weeklyCIE8, marks.weeklyCIE9, marks.weeklyCIE10
             ].filter(m => m !== null);
-            const weeklyAvg = weeklyCIEs.length > 0 ?
-              weeklyCIEs.reduce((a, b) => a + b, 0) / weeklyCIEs.length : 0;
+            const weeklySum = weeklyCIEs.reduce((a, b) => a + b, 0);
 
             const internalTests = [marks.internalTest1, marks.internalTest2].filter(m => m !== null);
-            const internalTestAvg = internalTests.length > 0 ?
-              internalTests.reduce((a, b) => a + b, 0) / internalTests.length : 0;
+            const internalSum = internalTests.reduce((a, b) => a + b, 0);
+
+            const totalMarks = weeklySum + internalSum + (marks.attendance || 0);
 
             marksSummary = {
-              weeklyAverage: parseFloat(weeklyAvg.toFixed(2)),
-              internalTestAverage: parseFloat(internalTestAvg.toFixed(2)),
-              attendance: marks.attendance || 0,
-              totalMarks: weeklyAvg + internalTestAvg + (marks.attendance || 0)
+              totalMarks: parseFloat(totalMarks.toFixed(2)),
+              // Include individual marks for lab subjects
+              weeklyCIE1: marks.weeklyCIE1 || null,
+              weeklyCIE2: marks.weeklyCIE2 || null,
+              weeklyCIE3: marks.weeklyCIE3 || null,
+              weeklyCIE4: marks.weeklyCIE4 || null,
+              weeklyCIE5: marks.weeklyCIE5 || null,
+              weeklyCIE6: marks.weeklyCIE6 || null,
+              weeklyCIE7: marks.weeklyCIE7 || null,
+              weeklyCIE8: marks.weeklyCIE8 || null,
+              weeklyCIE9: marks.weeklyCIE9 || null,
+              weeklyCIE10: marks.weeklyCIE10 || null,
+              internalTest1: marks.internalTest1 || null,
+              internalTest2: marks.internalTest2 || null,
+              attendance: marks.attendance || null
             };
           }
         } else {
           // Default empty marks
           if (subject.type === 'theory') {
             marksSummary = {
-              slipTestAverage: 0,
-              assignmentAverage: 0,
-              classTestAverage: 0,
-              attendance: 0,
-              totalMarks: 0
+              totalMarks: 0,
+              slipTest1: null,
+              slipTest2: null,
+              slipTest3: null,
+              assignment1: null,
+              assignment2: null,
+              classTest1: null,
+              classTest2: null,
+              attendance: null
             };
           } else {
             marksSummary = {
-              weeklyAverage: 0,
-              internalTestAverage: 0,
-              attendance: 0,
-              totalMarks: 0
+              totalMarks: 0,
+              weeklyCIE1: null,
+              weeklyCIE2: null,
+              weeklyCIE3: null,
+              weeklyCIE4: null,
+              weeklyCIE5: null,
+              weeklyCIE6: null,
+              weeklyCIE7: null,
+              weeklyCIE8: null,
+              weeklyCIE9: null,
+              weeklyCIE10: null,
+              internalTest1: null,
+              internalTest2: null,
+              attendance: null
             };
           }
         }
@@ -322,16 +356,17 @@ export const getStudentsForSubject = async (req, res) => {
       let marksSummary = {};
 
       if (studentMarks) {
-        // Prefer flat fields (slipTest1..3, assignment1..2, internalTest1..2) which match Marks.js
+        // Prefer flat fields (slipTest1..3, assignment1..2, classTest1..2) which match Marks.js
         if (subject.type === 'theory') {
           const slipTests = [studentMarks.slipTest1, studentMarks.slipTest2, studentMarks.slipTest3].filter(m => m !== null && m !== undefined);
-          const slipTestAvg = slipTests.length > 0 ? slipTests.reduce((a, b) => a + b, 0) / slipTests.length : 0;
+          const bestSlipTests = slipTests.slice().sort((a, b) => b - a).slice(0, 2);
+          const slipTestAvg = bestSlipTests.length > 0 ? bestSlipTests.reduce((a, b) => a + b, 0) / bestSlipTests.length : 0;
 
           const assignments = [studentMarks.assignment1, studentMarks.assignment2].filter(m => m !== null && m !== undefined);
           const assignmentAvg = assignments.length > 0 ? assignments.reduce((a, b) => a + b, 0) / assignments.length : 0;
 
-          const internalTests = [studentMarks.internalTest1, studentMarks.internalTest2].filter(m => m !== null && m !== undefined);
-          const internalTestAvg = internalTests.length > 0 ? internalTests.reduce((a, b) => a + b, 0) / internalTests.length : 0;
+          const classTests = [studentMarks.classTest1, studentMarks.classTest2].filter(m => m !== null && m !== undefined);
+          const classTestAvg = classTests.length > 0 ? classTests.reduce((a, b) => a + b, 0) / classTests.length : 0;
 
           // attendance might be a number (bulk upload) or an object (legacy). Handle both.
           const attendanceMark = (typeof studentMarks.attendance === 'number') ? studentMarks.attendance : (studentMarks.attendance?.marks || 0);
@@ -339,9 +374,9 @@ export const getStudentsForSubject = async (req, res) => {
           marksSummary = {
             slipTestAverage: parseFloat(slipTestAvg.toFixed(2)),
             assignmentAverage: parseFloat(assignmentAvg.toFixed(2)),
-            internalTestAverage: parseFloat(internalTestAvg.toFixed(2)),
+            classTestAverage: parseFloat(classTestAvg.toFixed(2)),
             attendanceMark: attendanceMark || 0,
-            totalMark: slipTestAvg + assignmentAvg + internalTestAvg + (attendanceMark || 0)
+            totalMark: slipTestAvg + assignmentAvg + classTestAvg + (attendanceMark || 0)
           };
         }
       }
@@ -699,3 +734,277 @@ export const bulkUpdateMarks = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// Configure multer for file uploads
+const upload = multer({
+  dest: 'uploads/',
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        file.mimetype === 'application/vnd.ms-excel') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only Excel files are allowed'));
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
+
+export const uploadExcelMarks = async (req, res) => {
+  try {
+    const { classCode, markType } = req.body;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    if (!classCode || !markType) {
+      return res.status(400).json({ message: 'classCode and markType are required' });
+    }
+
+    // Parse classCode to get subjectCode and section
+    let subjectCode = null;
+    let section = null;
+
+    if (typeof classCode !== 'string') {
+      return res.status(400).json({ message: 'Invalid classCode' });
+    }
+
+    const dashIndices = [];
+    for (let i = 0; i < classCode.length; i++) {
+      if (classCode[i] === '-') dashIndices.push(i);
+    }
+
+    for (const idx of dashIndices) {
+      const candidateSub = classCode.slice(0, idx);
+      const candidateSection = classCode.slice(idx + 1);
+      // eslint-disable-next-line no-await-in-loop
+      const found = await Subject.findOne({ code: candidateSub });
+      if (found) {
+        subjectCode = candidateSub;
+        section = candidateSection;
+        break;
+      }
+    }
+
+    if (!subjectCode) {
+      return res.status(400).json({ message: 'Unable to parse classCode or subject not found' });
+    }
+
+    // Verify faculty authorization
+    const faculty = await Faculty.findOne({ user: req.user.id });
+    if (!faculty) return res.status(404).json({ message: 'Faculty not found' });
+
+    const subject = await Subject.findOne({ code: subjectCode });
+    if (!subject) return res.status(404).json({ message: 'Subject not found' });
+
+    const assignment = await FacultyAssignment.findOne({
+      faculty: faculty._id,
+      subject: subject._id,
+      sections: { $in: [section] }
+    });
+
+    if (!assignment) {
+      return res.status(403).json({ message: 'Not authorized for this subject/section' });
+    }
+
+    // Read Excel file
+    const workbook = xlsx.readFile(file.path);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const jsonData = xlsx.utils.sheet_to_json(worksheet);
+
+    // Validate Excel structure
+    if (jsonData.length === 0) {
+      return res.status(400).json({ message: 'Excel file is empty' });
+    }
+
+    // Check if required columns exist (Roll No and Marks)
+    const firstRow = jsonData[0];
+    const hasRollNo = Object.keys(firstRow).some(key =>
+      key.toLowerCase().includes('roll') && key.toLowerCase().includes('no')
+    );
+    const hasMarks = Object.keys(firstRow).some(key =>
+      key.toLowerCase().includes('mark')
+    );
+
+    if (!hasRollNo || !hasMarks) {
+      return res.status(400).json({
+        message: 'Excel file must contain columns with "Roll No" and "Marks" in the header'
+      });
+    }
+
+    // Process the data
+    const marksArray = [];
+    const errors = [];
+
+    for (let i = 0; i < jsonData.length; i++) {
+      const row = jsonData[i];
+      const rowNumber = i + 2; // +2 because Excel rows start at 1 and we have header
+
+      // Find roll no and marks columns
+      let rollNo = null;
+      let marks = null;
+
+      for (const [key, value] of Object.entries(row)) {
+        const lowerKey = key.toLowerCase();
+        if (lowerKey.includes('roll') && lowerKey.includes('no')) {
+          rollNo = String(value).trim();
+        } else if (lowerKey.includes('mark')) {
+          marks = value;
+        }
+      }
+
+      if (!rollNo) {
+        errors.push(`Row ${rowNumber}: Roll No is missing`);
+        continue;
+      }
+
+      if (marks === null || marks === undefined || marks === '') {
+        errors.push(`Row ${rowNumber}: Marks is missing for Roll No ${rollNo}`);
+        continue;
+      }
+
+      const marksValue = parseFloat(marks);
+      if (isNaN(marksValue)) {
+        errors.push(`Row ${rowNumber}: Invalid marks value for Roll No ${rollNo}`);
+        continue;
+      }
+
+      marksArray.push({
+        rollNo,
+        marks: marksValue
+      });
+    }
+
+    if (marksArray.length === 0) {
+      return res.status(400).json({ message: 'No valid marks data found in Excel file' });
+    }
+
+    // Update marks in database
+    const updatePromises = marksArray.map(async (markData) => {
+      const student = await Student.findOne({ rollNo: markData.rollNo });
+      if (!student) {
+        errors.push(`Student with Roll No ${markData.rollNo} not found`);
+        return;
+      }
+
+      let marks = await Marks.findOne({
+        student: student._id,
+        subject: subject._id,
+        faculty: faculty._id
+      });
+
+      if (!marks) {
+        marks = new Marks({
+          student: student._id,
+          subject: subject._id,
+          faculty: faculty._id,
+          semester: subject.semester,
+          section: section,
+          enteredBy: req.user.id
+        });
+      }
+
+      // Set marks based on markType
+      switch (markType.toLowerCase()) {
+        case 'sliptest1':
+          marks.slipTest1 = markData.marks;
+          break;
+        case 'sliptest2':
+          marks.slipTest2 = markData.marks;
+          break;
+        case 'sliptest3':
+          marks.slipTest3 = markData.marks;
+          break;
+        case 'assignment1':
+          marks.assignment1 = markData.marks;
+          break;
+        case 'assignment2':
+          marks.assignment2 = markData.marks;
+          break;
+        case 'classtest1':
+          marks.classTest1 = markData.marks;
+          break;
+        case 'classtest2':
+          marks.classTest2 = markData.marks;
+          break;
+        case 'attendance':
+          marks.attendance = markData.marks;
+          break;
+        case 'weeklycie1':
+          marks.weeklyCIE1 = markData.marks;
+          break;
+        case 'weeklycie2':
+          marks.weeklyCIE2 = markData.marks;
+          break;
+        case 'weeklycie3':
+          marks.weeklyCIE3 = markData.marks;
+          break;
+        case 'weeklycie4':
+          marks.weeklyCIE4 = markData.marks;
+          break;
+        case 'weeklycie5':
+          marks.weeklyCIE5 = markData.marks;
+          break;
+        case 'weeklycie6':
+          marks.weeklyCIE6 = markData.marks;
+          break;
+        case 'weeklycie7':
+          marks.weeklyCIE7 = markData.marks;
+          break;
+        case 'weeklycie8':
+          marks.weeklyCIE8 = markData.marks;
+          break;
+        case 'weeklycie9':
+          marks.weeklyCIE9 = markData.marks;
+          break;
+        case 'weeklycie10':
+          marks.weeklyCIE10 = markData.marks;
+          break;
+        case 'internaltest1':
+          marks.internalTest1 = markData.marks;
+          break;
+        case 'internaltest2':
+          marks.internalTest2 = markData.marks;
+          break;
+        default:
+          errors.push(`Invalid mark type: ${markType}`);
+          return;
+      }
+
+      marks.lastUpdated = new Date();
+      return marks.save();
+    });
+
+    await Promise.all(updatePromises);
+
+    // Clean up uploaded file
+    fs.unlinkSync(file.path);
+
+    res.json({
+      message: 'Excel marks uploaded successfully',
+      processed: marksArray.length,
+      errors: errors.length > 0 ? errors : undefined,
+      markType,
+      section,
+      subject: subjectCode,
+      updatedAt: new Date()
+    });
+
+  } catch (error) {
+    console.error('Upload Excel marks error:', error);
+
+    // Clean up file if it exists
+    if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    res.status(500).json({ message: 'Server error: ' + error.message });
+  }
+};
+
+// Export multer upload middleware
+export { upload };

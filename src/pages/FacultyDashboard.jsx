@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Users, BookOpen, Upload, Eye, Loader2 } from "lucide-react";
+import { LogOut, Users, BookOpen, Upload, Eye, Loader2, FileSpreadsheet, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -28,6 +28,8 @@ const FacultyDashboard = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [excelFile, setExcelFile] = useState(null);
+  const [excelUploading, setExcelUploading] = useState(false);
 
   useEffect(() => {
     fetchFacultyData();
@@ -74,24 +76,54 @@ const FacultyDashboard = () => {
     setSelectedClass(classItem);
     setSelectedTest("");
     setBulkMarks({});
+    setExcelFile(null);
     fetchStudentsForClass(classItem.classCode);
+  };
+
+  // Populate bulkMarks with existing marks when test is selected
+  const populateBulkMarksForTest = (testType) => {
+    const fieldMapping = {
+      sliptest1: 'slipTest1',
+      sliptest2: 'slipTest2',
+      sliptest3: 'slipTest3',
+      assignment1: 'assignment1',
+      assignment2: 'assignment2',
+      classtest1: 'classTest1',
+      classtest2: 'classTest2',
+      attendance: 'attendance'
+    };
+
+    const field = fieldMapping[testType];
+    const newBulkMarks = {};
+    students.forEach(student => {
+      const existingMark = student.marks?.[field];
+      if (existingMark !== null && existingMark !== undefined) {
+        newBulkMarks[student.rollNo] = existingMark.toString();
+      }
+    });
+    setBulkMarks(newBulkMarks);
   };
 
   const getTestOptions = () => {
     if (!selectedClass) return [];
 
+    // Options for theory subjects
     return [
-      { value: "slipTest", label: "Slip Test", max: 5 },
-      { value: "assignment", label: "Assignment", max: 10 },
-      { value: "internalTest", label: "Internal Test", max: 20 },
+      { value: "sliptest1", label: "Slip Test 1", max: 5 },
+      { value: "sliptest2", label: "Slip Test 2", max: 5 },
+      { value: "sliptest3", label: "Slip Test 3", max: 5 },
+      { value: "assignment1", label: "Assignment 1", max: 10 },
+      { value: "assignment2", label: "Assignment 2", max: 10 },
+      { value: "classtest1", label: "Class Test 1", max: 20 },
+      { value: "classtest2", label: "Class Test 2", max: 20 },
       { value: "attendance", label: "Attendance", max: 5 },
     ];
   };
 
   const handleBulkMarkChange = (rollNo, value) => {
-    setBulkMarks(prev => ({ 
-      ...prev, 
-      [rollNo]: value 
+    setBulkMarks(prev => ({
+      ...prev,
+      [rollNo]: value
     }));
   };
 
@@ -124,8 +156,8 @@ const FacultyDashboard = () => {
     setUploading(true);
     try {
       await apiService.uploadBulkMarks(
-        selectedClass.classCode, 
-        selectedTest, 
+        selectedClass.classCode,
+        selectedTest,
         marksToUpload
       );
 
@@ -148,6 +180,147 @@ const FacultyDashboard = () => {
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleExcelFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel'
+      ];
+
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Error",
+          description: "Please select a valid Excel file (.xlsx or .xls)",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Error",
+          description: "File size must be less than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setExcelFile(file);
+    }
+  };
+
+  const handleExcelUpload = async () => {
+    if (!excelFile || !selectedTest || !selectedClass) {
+      toast({
+        title: "Error",
+        description: "Please select a test type, class, and Excel file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setExcelUploading(true);
+    try {
+      const result = await apiService.uploadExcelMarks(
+        selectedClass.classCode,
+        selectedTest,
+        excelFile
+      );
+
+      toast({
+        title: "Success",
+        description: `Excel marks uploaded successfully. Processed ${result.processed} students.`,
+      });
+
+      if (result.errors && result.errors.length > 0) {
+        toast({
+          title: "Warning",
+          description: `Some entries had errors: ${result.errors.join(', ')}`,
+          variant: "destructive",
+        });
+      }
+
+      setExcelFile(null);
+      setSelectedTest("");
+      // Refresh students data to show updated marks
+      fetchStudentsForClass(selectedClass.classCode);
+    } catch (error) {
+      console.error('Error uploading Excel marks:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload Excel marks",
+        variant: "destructive",
+      });
+    } finally {
+      setExcelUploading(false);
+    }
+  };
+
+  const downloadMarksAsCSV = () => {
+    if (!students || students.length === 0) {
+      toast({
+        title: "Error",
+        description: "No student data available to download",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Prepare CSV headers
+    const headers = [
+      "Roll No",
+      "Student Name",
+      "Slip Test 1",
+      "Slip Test 2",
+      "Slip Test 3",
+      "Assignment 1",
+      "Assignment 2",
+      "Class Test 1",
+      "Class Test 2",
+      "Attendance",
+      "Total CIE Marks"
+    ];
+
+    // Prepare CSV rows
+    const rows = students.map(student => [
+      student.rollNo,
+      student.name,
+      student.marks?.slipTest1 || 0,
+      student.marks?.slipTest2 || 0,
+      student.marks?.slipTest3 || 0,
+      student.marks?.assignment1 || 0,
+      student.marks?.assignment2 || 0,
+      student.marks?.classTest1 || 0,
+      student.marks?.classTest2 || 0,
+      student.marks?.attendance || 0,
+      student.marks?.totalMarks || 0
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(field => `"${field}"`).join(","))
+      .join("\n");
+
+    // Create and trigger download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${selectedClass.subjectCode}_${selectedClass.classCode}_marks.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Success",
+      description: "Marks downloaded successfully as CSV",
+    });
   };
 
   if (loading) {
@@ -257,10 +430,14 @@ const FacultyDashboard = () => {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="upload" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 h-12">
+                <TabsList className="grid w-full grid-cols-3 h-12">
                   <TabsTrigger value="upload" className="text-base">
                     <Upload className="w-4 h-4 mr-2" />
-                    Upload Marks
+                    Manual Upload
+                  </TabsTrigger>
+                  <TabsTrigger value="excel" className="text-base">
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Excel Upload
                   </TabsTrigger>
                   <TabsTrigger value="view" className="text-base">
                     <Eye className="w-4 h-4 mr-2" />
@@ -272,7 +449,10 @@ const FacultyDashboard = () => {
                   {/* Test Selection */}
                   <div className="space-y-3">
                     <Label htmlFor="test" className="text-base font-semibold">Select Test/Assessment</Label>
-                    <Select value={selectedTest} onValueChange={setSelectedTest}>
+                    <Select value={selectedTest} onValueChange={(value) => {
+                      setSelectedTest(value);
+                      populateBulkMarksForTest(value);
+                    }}>
                       <SelectTrigger className="h-12 text-base">
                         <SelectValue placeholder="Choose a test to upload marks" />
                       </SelectTrigger>
@@ -350,27 +530,122 @@ const FacultyDashboard = () => {
                   )}
                 </TabsContent>
 
+                <TabsContent value="excel" className="space-y-6 mt-8">
+                  {/* Excel Upload Section */}
+                  <div className="space-y-6">
+                    <div className="bg-blue-50 p-5 rounded-lg border border-blue-200">
+                      <h3 className="font-semibold text-lg mb-2 text-blue-900">Excel File Upload</h3>
+                      <p className="text-sm text-blue-700 mb-4">
+                        Upload student marks from an Excel file. The file should have columns named "Roll No" and "Marks".
+                      </p>
+                      <div className="text-xs text-blue-600">
+                        <p>• Supported formats: .xlsx, .xls</p>
+                        <p>• Maximum file size: 5MB</p>
+                        <p>• First sheet will be processed</p>
+                      </div>
+                    </div>
+
+                    {/* Test Selection for Excel */}
+                    <div className="space-y-3">
+                      <Label htmlFor="excel-test" className="text-base font-semibold">Select Test/Assessment for Excel Upload</Label>
+                      <Select value={selectedTest} onValueChange={setSelectedTest}>
+                        <SelectTrigger className="h-12 text-base">
+                          <SelectValue placeholder="Choose a test type for Excel upload" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getTestOptions().map(test => (
+                            <SelectItem key={test.value} value={test.value} className="text-base">
+                              {test.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* File Upload */}
+                    <div className="space-y-3">
+                      <Label htmlFor="excel-file" className="text-base font-semibold">Select Excel File</Label>
+                      <div className="flex items-center gap-4">
+                        <Input
+                          id="excel-file"
+                          type="file"
+                          accept=".xlsx,.xls"
+                          onChange={handleExcelFileChange}
+                          className="flex-1"
+                        />
+                        {excelFile && (
+                          <div className="text-sm text-muted-foreground">
+                            {excelFile.name} ({(excelFile.size / 1024 / 1024).toFixed(2)} MB)
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Upload Button */}
+                    <div className="pt-2">
+                      <Button
+                        onClick={handleExcelUpload}
+                        disabled={excelUploading || !excelFile || !selectedTest}
+                        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 h-12 text-base"
+                        size="lg"
+                      >
+                        {excelUploading ? (
+                          <>
+                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                            Uploading Excel...
+                          </>
+                        ) : (
+                          <>
+                            <FileSpreadsheet className="w-5 h-5 mr-2" />
+                            Upload Excel Marks
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </TabsContent>
+
                 <TabsContent value="view" className="space-y-4 mt-8">
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Student Marks Overview</h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">Student Marks Overview</h3>
+                      <Button
+                        onClick={downloadMarksAsCSV}
+                        variant="outline"
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download Marks
+                      </Button>
+                    </div>
                     <div className="border rounded-lg overflow-hidden shadow-sm">
-                      <div className="bg-muted px-6 py-4 grid grid-cols-6 gap-4 font-semibold text-sm">
+                      <div className="bg-muted px-6 py-4 grid grid-cols-[120px_1fr_repeat(9,60px)] gap-2 font-semibold text-sm">
                         <div>Roll No</div>
                         <div>Name</div>
-                        <div>Slip Test Avg</div>
-                        <div>Assignment Avg</div>
-                        <div>Internal Test Avg</div>
-                        <div>Total</div>
+                        <div className="text-center">ST1</div>
+                        <div className="text-center">ST2</div>
+                        <div className="text-center">ST3</div>
+                        <div className="text-center">A1</div>
+                        <div className="text-center">A2</div>
+                        <div className="text-center">CT1</div>
+                        <div className="text-center">CT2</div>
+                        <div className="text-center">Atd</div>
+                        <div className="text-center">CIE</div>
                       </div>
                       <div className="divide-y">
                         {students.map((student) => (
-                          <div key={student.rollNo} className="px-6 py-4 grid grid-cols-6 gap-4 items-center hover:bg-muted/50 transition-colors text-sm">
+                          <div key={student.rollNo} className="px-6 py-4 grid grid-cols-[120px_1fr_repeat(9,60px)] gap-2 items-center hover:bg-muted/50 transition-colors text-sm">
                             <div className="font-medium">{student.rollNo}</div>
                             <div>{student.name}</div>
-                            <div>{student.marks?.slipTestAverage || 0}</div>
-                            <div>{student.marks?.assignmentAverage || 0}</div>
-                            <div>{student.marks?.internalTestAverage || 0}</div>
-                            <div className="font-semibold text-primary">{student.marks?.totalMarks || 0}</div>
+                            <div className="text-center">{student.marks?.slipTest1 || 0}</div>
+                            <div className="text-center">{student.marks?.slipTest2 || 0}</div>
+                            <div className="text-center">{student.marks?.slipTest3 || 0}</div>
+                            <div className="text-center">{student.marks?.assignment1 || 0}</div>
+                            <div className="text-center">{student.marks?.assignment2 || 0}</div>
+                            <div className="text-center">{student.marks?.classTest1 || 0}</div>
+                            <div className="text-center">{student.marks?.classTest2 || 0}</div>
+                            <div className="text-center">{student.marks?.attendance || 0}</div>
+                            <div className="text-center font-semibold text-primary">{student.marks?.totalMarks || 0}</div>
                           </div>
                         ))}
                       </div>
