@@ -12,6 +12,7 @@ import {
   addClassToDepartment,
   getDepartmentClasses,
   addStudentsToClass,
+  createStudentAndAddToClass,
 } from '../controllers/adminController.js';
 
 const router = express.Router();
@@ -43,5 +44,6 @@ router.get('/departments/:departmentId/faculty', getDepartmentFaculty);
 router.post('/departments/:departmentId/classes', addClassToDepartment);
 router.get('/departments/:departmentId/classes', getDepartmentClasses);
 router.post('/departments/:departmentId/classes/:classId/students', addStudentsToClass);
+router.post('/departments/:departmentId/classes/:classId/create-student', createStudentAndAddToClass);
 
 export default router;

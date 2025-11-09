@@ -136,6 +136,13 @@ class ApiService {
       body: classData,
     });
   }
+
+  async createStudentAndAddToClass(departmentId, classId, studentData) {
+    return this.request(`/admin/departments/${departmentId}/classes/${classId}/create-student`, {
+      method: 'POST',
+      body: studentData,
+    });
+  }
 }
 
 export const apiService = new ApiService();

@@ -99,6 +99,7 @@ export const addSubjectToDepartment = async (req, res) => {
     const subject = new Subject({
       code,
       name,
+      abbreviation,
       credits,
       type,
       semester,
@@ -142,7 +143,7 @@ export const getDepartmentSubjects = async (req, res) => {
 export const addFacultyToDepartment = async (req, res) => {
   try {
     const { departmentId } = req.params;
-    const { name, email, mobile, designation, facultyId } = req.body;
+    const { name, email, mobile, role, facultyId } = req.body;
 
     // Create user account for faculty
     const user = new User({
@@ -158,11 +159,12 @@ export const addFacultyToDepartment = async (req, res) => {
     // Create faculty profile
     const faculty = new Faculty({
       user: user._id,
+      facultyId,
       name,
       email,
       mobile,
       department: departmentId,
-      designation,
+      role,
     });
 
     await faculty.save();
@@ -281,5 +283,73 @@ export const addStudentsToClass = async (req, res) => {
   } catch (error) {
     console.error('Add students to class error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Create student and add to class
+export const createStudentAndAddToClass = async (req, res) => {
+  try {
+    const { departmentId, classId } = req.params;
+    const { name, rollNo, email, mobile } = req.body;
+
+    // Get department to find class details
+    const department = await Department.findById(departmentId);
+    if (!department) {
+      return res.status(404).json({ message: 'Department not found' });
+    }
+
+    const classItem = department.classes.id(classId);
+    if (!classItem) {
+      return res.status(404).json({ message: 'Class not found' });
+    }
+
+    // Create user account for student
+    const user = new User({
+      username: rollNo,
+      email,
+      password: 'student123', // Default password
+      name,
+      role: 'student',
+    });
+
+    await user.save();
+
+    // Create student profile
+    const student = new Student({
+      user: user._id,
+      rollNo,
+      name,
+      section: classItem.section,
+      year: classItem.year,
+      semester: classItem.semester,
+      department: department.code,
+      contact: {
+        email,
+        mobile,
+      },
+    });
+
+    await student.save();
+
+    // Add student to class
+    const updatedDepartment = await Department.findOneAndUpdate(
+      { _id: departmentId, 'classes._id': classId },
+      { $push: { 'classes.$.students': student._id } },
+      { new: true }
+    ).populate({
+      path: 'classes.students',
+      select: 'name rollNo'
+    });
+
+    const updatedClass = updatedDepartment.classes.id(classId);
+
+    res.status(201).json(updatedClass);
+  } catch (error) {
+    console.error('Create student and add to class error:', error);
+    if (error.code === 11000) {
+      res.status(400).json({ message: 'Student roll number or email already exists' });
+    } else {
+      res.status(500).json({ message: 'Server error' });
+    }
   }
 };

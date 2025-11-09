@@ -18,6 +18,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("departments");
   const [selectedDepartment, setSelectedDepartment] = useState(null);
+  const [selectedClass, setSelectedClass] = useState(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -35,12 +36,19 @@ const AdminDashboard = () => {
     name: "",
     email: "",
     mobile: "",
-    designation: "Assistant Professor"
+    facultyId: "",
+    role: "Assistant Professor"
   });
   const [newClass, setNewClass] = useState({
     section: "",
     year: "",
     semester: ""
+  });
+  const [newStudent, setNewStudent] = useState({
+    name: "",
+    rollNo: "",
+    email: "",
+    mobile: ""
   });
 
   useEffect(() => {
@@ -124,7 +132,8 @@ const AdminDashboard = () => {
         name: "",
         email: "",
         mobile: "",
-        designation: "Assistant Professor"
+        facultyId: "",
+        role: "Assistant Professor"
       });
       loadDepartments();
     } catch (error) {
@@ -161,6 +170,33 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleCreateStudentAndAddToClass = async (e) => {
+    e.preventDefault();
+    if (!selectedDepartment || !selectedClass) return;
+
+    try {
+      await apiService.createStudentAndAddToClass(selectedDepartment._id, selectedClass._id, newStudent);
+      toast({
+        title: "Success",
+        description: "Student created and added to class successfully",
+      });
+      setNewStudent({
+        name: "",
+        rollNo: "",
+        email: "",
+        mobile: ""
+      });
+      setSelectedClass(null);
+      loadDepartments();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create student and add to class",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("userRole");
     localStorage.removeItem("userData");
@@ -185,7 +221,7 @@ const AdminDashboard = () => {
               <Building2 className="w-8 h-8 text-primary" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-                <p className="text-sm text-gray-600">Manage departments, subjects, faculty, and classes</p>
+                <p className="text-sm text-gray-600">Manage departments, subjects, faculty, classes, and students</p>
               </div>
             </div>
             <Button onClick={handleLogout} variant="outline">
@@ -448,8 +484,18 @@ const AdminDashboard = () => {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="faculty-designation">Designation</Label>
-                          <Select value={newFaculty.designation} onValueChange={(value) => setNewFaculty({...newFaculty, designation: value})}>
+                          <Label htmlFor="faculty-id">Faculty ID</Label>
+                          <Input
+                            id="faculty-id"
+                            value={newFaculty.facultyId}
+                            onChange={(e) => setNewFaculty({...newFaculty, facultyId: e.target.value})}
+                            placeholder="e.g., FAC001"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="faculty-role">Role</Label>
+                          <Select value={newFaculty.role} onValueChange={(value) => setNewFaculty({...newFaculty, role: value})}>
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
@@ -553,9 +599,80 @@ const AdminDashboard = () => {
                   </Dialog>
                 </div>
 
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-medium">Select a class to add students</h3>
+                  {selectedClass && (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Student to {selectedClass.section}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Add Student to {selectedClass.section}</DialogTitle>
+                          <DialogDescription>
+                            Create a new student and add them to this class.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleCreateStudentAndAddToClass} className="space-y-4">
+                          <div>
+                            <Label htmlFor="student-name">Full Name</Label>
+                            <Input
+                              id="student-name"
+                              value={newStudent.name}
+                              onChange={(e) => setNewStudent({...newStudent, name: e.target.value})}
+                              placeholder="e.g., John Doe"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="student-rollno">Roll Number</Label>
+                            <Input
+                              id="student-rollno"
+                              value={newStudent.rollNo}
+                              onChange={(e) => setNewStudent({...newStudent, rollNo: e.target.value})}
+                              placeholder="e.g., 12345"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="student-email">Email</Label>
+                            <Input
+                              id="student-email"
+                              type="email"
+                              value={newStudent.email}
+                              onChange={(e) => setNewStudent({...newStudent, email: e.target.value})}
+                              placeholder="e.g., john.doe@college.edu"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="student-mobile">Mobile</Label>
+                            <Input
+                              id="student-mobile"
+                              value={newStudent.mobile}
+                              onChange={(e) => setNewStudent({...newStudent, mobile: e.target.value})}
+                              placeholder="e.g., +91 9876543210"
+                            />
+                          </div>
+                          <Button type="submit" className="w-full">Add Student</Button>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {selectedDepartment.classes?.map((classItem, index) => (
-                    <Card key={index}>
+                    <Card
+                      key={index}
+                      className={`cursor-pointer transition-all hover:shadow-lg ${
+                        selectedClass?._id === classItem._id ? 'ring-2 ring-primary' : ''
+                      }`}
+                      onClick={() => setSelectedClass(classItem)}
+                    >
                       <CardHeader>
                         <CardTitle className="flex items-center space-x-2">
                           <GraduationCap className="w-5 h-5" />

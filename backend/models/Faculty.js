@@ -7,6 +7,11 @@ const facultySchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
+  facultyId: {
+    type: String,
+    required: true,
+    unique: true,
+  },
   name: {
     type: String,
     required: true,
@@ -23,7 +28,7 @@ const facultySchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  designation: {
+  role: {
     type: String,
     required: true,
   },

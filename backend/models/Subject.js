@@ -10,6 +10,10 @@ const subjectSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  abbreviation: {
+    type: String,
+    required: true,
+  },
   credits: {
     type: Number,
     required: true,
