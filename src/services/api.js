@@ -103,6 +103,39 @@ class ApiService {
   async getStudentMarks(subjectCode) {
     return this.request(`/students/marks/${subjectCode}`);
   }
+
+  // Admin methods
+  async getDepartments() {
+    return this.request('/admin/departments');
+  }
+
+  async createDepartment(departmentData) {
+    return this.request('/admin/departments', {
+      method: 'POST',
+      body: departmentData,
+    });
+  }
+
+  async addSubjectToDepartment(departmentId, subjectData) {
+    return this.request(`/admin/departments/${departmentId}/subjects`, {
+      method: 'POST',
+      body: subjectData,
+    });
+  }
+
+  async addFacultyToDepartment(departmentId, facultyData) {
+    return this.request(`/admin/departments/${departmentId}/faculty`, {
+      method: 'POST',
+      body: facultyData,
+    });
+  }
+
+  async addClassToDepartment(departmentId, classData) {
+    return this.request(`/admin/departments/${departmentId}/classes`, {
+      method: 'POST',
+      body: classData,
+    });
+  }
 }
 
 export const apiService = new ApiService();

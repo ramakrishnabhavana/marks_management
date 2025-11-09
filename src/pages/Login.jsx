@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GraduationCap, Users, Loader2 } from "lucide-react";
+import { GraduationCap, Users, ShieldCheck, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiService } from "@/services/api";
 
@@ -46,7 +46,7 @@ const Login = () => {
         description: `Welcome back, ${data.user.name}!`,
       });
 
-      navigate(data.user.role === "student" ? "/student" : "/faculty");
+      navigate(data.user.role === "student" ? "/student" : data.user.role === "faculty" ? "/faculty" : data.user.role === "admin" ? "/admin" : "/");
     } catch (error) {
       console.error('Login error:', error);
       toast({
@@ -72,49 +72,44 @@ const Login = () => {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card 
-              className="cursor-pointer transition-all hover:shadow-xl hover:scale-105 border-2 hover:border-primary"
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card
+              className="cursor-pointer transition-all hover:shadow-lg hover:scale-105 bg-white/10 backdrop-blur-sm border-white/20"
               onClick={() => setRole("student")}
             >
-              <CardHeader className="text-center pb-4">
-                <div className="mx-auto w-20 h-20 bg-gradient-primary rounded-full flex items-center justify-center mb-4">
-                  <GraduationCap className="w-10 h-10 text-white" />
-                </div>
-                <CardTitle className="text-2xl">Student Login</CardTitle>
-                <CardDescription className="text-base">
-                  Access your marks and academic performance
+              <CardHeader className="text-center">
+                <GraduationCap className="w-12 h-12 text-white mx-auto mb-4" />
+                <CardTitle className="text-white">Student Login</CardTitle>
+                <CardDescription className="text-white/80">
+                  Access your marks and academic records
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <p>✓ View detailed marks breakdown</p>
-                  <p>✓ Track performance across subjects</p>
-                  <p>✓ Monitor attendance and grades</p>
-                </div>
-              </CardContent>
             </Card>
 
-            <Card 
-              className="cursor-pointer transition-all hover:shadow-xl hover:scale-105 border-2 hover:border-accent"
+            <Card
+              className="cursor-pointer transition-all hover:shadow-lg hover:scale-105 bg-white/10 backdrop-blur-sm border-white/20"
               onClick={() => setRole("faculty")}
             >
-              <CardHeader className="text-center pb-4">
-                <div className="mx-auto w-20 h-20 bg-gradient-accent rounded-full flex items-center justify-center mb-4">
-                  <Users className="w-10 h-10 text-white" />
-                </div>
-                <CardTitle className="text-2xl">Faculty Login</CardTitle>
-                <CardDescription className="text-base">
-                  Manage and upload student marks
+              <CardHeader className="text-center">
+                <Users className="w-12 h-12 text-white mx-auto mb-4" />
+                <CardTitle className="text-white">Faculty Login</CardTitle>
+                <CardDescription className="text-white/80">
+                  Manage student marks and subjects
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <p>✓ Upload marks for your subjects</p>
-                  <p>✓ Automated calculations</p>
-                  <p>✓ Manage multiple classes</p>
-                </div>
-              </CardContent>
+            </Card>
+
+            <Card
+              className="cursor-pointer transition-all hover:shadow-lg hover:scale-105 bg-white/10 backdrop-blur-sm border-white/20"
+              onClick={() => setRole("admin")}
+            >
+              <CardHeader className="text-center">
+                <ShieldCheck className="w-12 h-12 text-white mx-auto mb-4" />
+                <CardTitle className="text-white">Admin Login</CardTitle>
+                <CardDescription className="text-white/80">
+                  Manage departments, faculty, and system settings
+                </CardDescription>
+              </CardHeader>
             </Card>
           </div>
         </div>
@@ -124,17 +119,19 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-info to-accent p-4">
-      <Card className="w-full max-w-md shadow-2xl">
-        <CardHeader className="space-y-3">
-          <div className="mx-auto w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center">
+      <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm">
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
             {role === "student" ? (
               <GraduationCap className="w-8 h-8 text-white" />
-            ) : (
+            ) : role === "faculty" ? (
               <Users className="w-8 h-8 text-white" />
+            ) : (
+              <ShieldCheck className="w-8 h-8 text-white" />
             )}
           </div>
           <CardTitle className="text-2xl text-center">
-            {role === "student" ? "Student" : "Faculty"} Login
+            {role === "student" ? "Student" : role === "faculty" ? "Faculty" : "Admin"} Login
           </CardTitle>
           <CardDescription className="text-center">
             Enter your credentials to access the portal
@@ -144,12 +141,12 @@ const Login = () => {
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username">
-                {role === "student" ? "Roll Number" : "Name"}
+                {role === "student" ? "Roll Number" : role === "admin" ? "Username" : "Name"}
               </Label>
               <Input
                 id="username"
                 type="text"
-                placeholder={role === "student" ? "Enter your roll number (e.g., 160123737001)" : "Enter your name (e.g., E. Rama Lakshmi)"}
+                placeholder={role === "student" ? "Enter your roll number (e.g., 160123737001)" : role === "admin" ? "Enter your username (e.g., admin)" : "Enter your name (e.g., E. Rama Lakshmi)"}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required

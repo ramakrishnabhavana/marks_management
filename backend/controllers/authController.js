@@ -62,6 +62,12 @@ export const login = async (req, res) => {
           designation: faculty.designation
         };
       }
+    } else if (user.role === 'admin') {
+      profile = {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      };
     }
 
     const token = generateToken(user._id);
@@ -113,6 +119,12 @@ export const getCurrentUser = async (req, res) => {
           designation: faculty.designation
         };
       }
+    } else if (req.user.role === 'admin') {
+      profile = {
+        id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+      };
     }
 
     res.json({

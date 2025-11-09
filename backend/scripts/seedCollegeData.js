@@ -60,35 +60,35 @@ const seedCollegeData = async () => {
     const faculties = await Faculty.create([
       {
         user: facultyUsers[0]._id,
-        name: 'Dr. E. Rama Lakshmi',
+        name: 'E. Rama Lakshmi',
         email: 'rama.lakshmi@college.edu',
         department: 'Computer Science',
         designation: 'Professor'
       },
       {
         user: facultyUsers[1]._id,
-        name: 'Dr. Suresh Kumar',
+        name: 'Suresh Kumar',
         email: 'suresh.kumar@college.edu',
         department: 'Information Technology',
         designation: 'Associate Professor'
       },
       {
         user: facultyUsers[2]._id,
-        name: 'Dr. Priya Sharma',
+        name: 'Priya Sharma',
         email: 'priya.sharma@college.edu',
         department: 'Computer Science',
         designation: 'Assistant Professor'
       },
       {
         user: facultyUsers[3]._id,
-        name: 'Dr. Anil Verma',
+        name: 'Anil Verma',
         email: 'anil.verma@college.edu',
         department: 'Information Technology',
         designation: 'Professor'
       },
       {
         user: facultyUsers[4]._id,
-        name: 'Dr. Meera Patel',
+        name: 'Meera Patel',
         email: 'meera.patel@college.edu',
         department: 'Computer Science',
         designation: 'Associate Professor'
