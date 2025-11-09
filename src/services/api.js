@@ -143,6 +143,69 @@ class ApiService {
       body: studentData,
     });
   }
+
+  // Bulk upload methods
+  async bulkAddSubjects(departmentId, file, semester) {
+    const formData = new FormData();
+    formData.append('excelFile', file);
+    formData.append('semester', semester);
+
+    return this.request(`/admin/departments/${departmentId}/subjects/bulk`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        // Let browser set Content-Type with boundary for FormData
+        ...this.token && { 'Authorization': `Bearer ${this.token}` }
+      },
+    });
+  }
+
+  async bulkAddFaculty(departmentId, file) {
+    const formData = new FormData();
+    formData.append('excelFile', file);
+
+    return this.request(`/admin/departments/${departmentId}/faculty/bulk`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        // Let browser set Content-Type with boundary for FormData
+        ...this.token && { 'Authorization': `Bearer ${this.token}` }
+      },
+    });
+  }
+
+  async bulkAddStudents(departmentId, classId, file) {
+    const formData = new FormData();
+    formData.append('excelFile', file);
+
+    return this.request(`/admin/departments/${departmentId}/classes/${classId}/students/bulk`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        // Let browser set Content-Type with boundary for FormData
+        ...this.token && { 'Authorization': `Bearer ${this.token}` }
+      },
+    });
+  }
+
+  // Delete methods
+  async deleteSubject(departmentId, subjectId) {
+    return this.request(`/admin/departments/${departmentId}/subjects/${subjectId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async deleteFaculty(departmentId, facultyId) {
+    return this.request(`/admin/departments/${departmentId}/faculty/${facultyId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async deleteStudent(departmentId, classId, studentId) {
+    return this.request(`/admin/departments/${departmentId}/classes/${classId}/students/${studentId}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const apiService = new ApiService();

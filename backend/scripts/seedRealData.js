@@ -48,24 +48,27 @@ const seedRealData = async () => {
     const faculties = await Faculty.create([
       {
         user: facultyUsers[0]._id,
+        facultyId: 'FAC001',
         name: 'Mr. U. Sai Ram',
         email: 'u.sairam@cbit.ac.in',
         department: 'Information Technology',
-        designation: 'Assistant Professor'
+        role: 'Assistant Professor'
       },
       {
         user: facultyUsers[1]._id,
+        facultyId: 'FAC002',
         name: 'Dr. B. Harish Goud',
         email: 'b.harishgoud@cbit.ac.in',
         department: 'Information Technology',
-        designation: 'Professor'
+        role: 'Professor'
       },
       {
         user: facultyUsers[2]._id,
+        facultyId: 'FAC003',
         name: 'Mr. Sai Venkat',
         email: 'sai.venkat@cbit.ac.in',
         department: 'Information Technology',
-        designation: 'Assistant Professor'
+        role: 'Assistant Professor'
       }
     ]);
 
@@ -74,6 +77,7 @@ const seedRealData = async () => {
       {
         code: '22CIE55',
         name: 'Cyber Security',
+        abbreviation: 'CS',
         credits: 3,
         type: 'theory',
         semester: 5,
@@ -82,6 +86,7 @@ const seedRealData = async () => {
       {
         code: '22ITE04',
         name: 'Software Project Management',
+        abbreviation: 'SPM',
         credits: 3,
         type: 'theory',
         semester: 5,

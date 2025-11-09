@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GraduationCap, Users, ShieldCheck, Loader2 } from "lucide-react";
+import { GraduationCap, Users, Building2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiService } from "@/services/api";
 
@@ -104,7 +104,7 @@ const Login = () => {
               onClick={() => setRole("admin")}
             >
               <CardHeader className="text-center">
-                <ShieldCheck className="w-12 h-12 text-white mx-auto mb-4" />
+                <Building2 className="w-12 h-12 text-white mx-auto mb-4" />
                 <CardTitle className="text-white">Admin Login</CardTitle>
                 <CardDescription className="text-white/80">
                   Manage departments, faculty, and system settings
@@ -123,11 +123,11 @@ const Login = () => {
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             {role === "student" ? (
-              <GraduationCap className="w-8 h-8 text-white" />
+              <GraduationCap className="w-8 h-8 text-[#3b4caa]" />
             ) : role === "faculty" ? (
-              <Users className="w-8 h-8 text-white" />
+              <Users className="w-8 h-8 text-[#3b4caa]" />
             ) : (
-              <ShieldCheck className="w-8 h-8 text-white" />
+              <Building2 className="w-8 h-8 text-[#3b4caa]" />
             )}
           </div>
           <CardTitle className="text-2xl text-center">
