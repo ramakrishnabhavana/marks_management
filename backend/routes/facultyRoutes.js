@@ -10,7 +10,8 @@ import {
   uploadExcelMarks,
   upload,
   getAvailableSubjects,
-  assignSubjectToFaculty
+  assignSubjectToFaculty,
+  removeSubjectFromFaculty
 } from '../controllers/facultyController.js';
 
 const router = express.Router();
@@ -22,6 +23,7 @@ router.get('/profile', getFacultyProfile);
 router.get('/subjects', getFacultySubjects);
 router.get('/subjects/available', getAvailableSubjects);
 router.post('/subjects/assign', assignSubjectToFaculty);
+router.delete('/subjects/:subjectId/remove', removeSubjectFromFaculty);
 router.get('/classes/:classCode/students', getClassStudents);
 router.get('/subjects/:subjectCode/sections/:section/students', getStudentsForSubject);
 router.post('/marks/update', updateStudentMarks);

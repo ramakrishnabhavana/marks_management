@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Faculty from '../models/Faculty.js';
 import Student from '../models/Student.js';
 import Subject from '../models/Subject.js';
@@ -58,6 +59,7 @@ export const getFacultySubjects = async (req, res) => {
           classCode: `${assignment.subject.code}-${primarySection}`,
           subjectCode: assignment.subject.code,
           subjectName: assignment.subject.name,
+          subjectId: assignment.subject._id,
           credits: assignment.subject.credits,
           type: assignment.subject.type,
           sections: sectionDetails,
@@ -859,6 +861,51 @@ export const assignSubjectToFaculty = async (req, res) => {
     });
   } catch (error) {
     console.error('Assign subject to faculty error:', error);
+    res.status(500).json({ message: 'Server error: ' + error.message });
+  }
+};
+
+export const removeSubjectFromFaculty = async (req, res) => {
+  try {
+    const { subjectId } = req.params;
+
+    if (!subjectId || subjectId === 'undefined') {
+      return res.status(400).json({ message: 'subjectId is required and must be valid' });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(subjectId)) {
+      return res.status(400).json({ message: 'Invalid subjectId format' });
+    }
+
+    const faculty = await Faculty.findOne({ user: req.user.id });
+    if (!faculty) {
+      return res.status(404).json({ message: 'Faculty not found' });
+    }
+
+    // Find and delete the assignment
+    const assignment = await FacultyAssignment.findOneAndDelete({
+      faculty: faculty._id,
+      subject: subjectId
+    });
+
+    if (!assignment) {
+      return res.status(404).json({ message: 'Subject assignment not found' });
+    }
+
+    // Optionally, you might want to delete related marks or enrollments
+    // But for now, we'll just remove the assignment
+
+    res.json({
+      message: 'Subject removed successfully',
+      removedAssignment: {
+        subjectId: assignment.subject,
+        sections: assignment.sections,
+        semester: assignment.semester,
+        academicYear: assignment.academicYear
+      }
+    });
+  } catch (error) {
+    console.error('Remove subject from faculty error:', error);
     res.status(500).json({ message: 'Server error: ' + error.message });
   }
 };

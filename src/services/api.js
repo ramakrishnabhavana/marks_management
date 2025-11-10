@@ -70,6 +70,12 @@ class ApiService {
     });
   }
 
+  async removeSubjectFromFaculty(subjectId) {
+    return this.request(`/faculty/subjects/${subjectId}/remove`, {
+      method: 'DELETE',
+    });
+  }
+
   async getClassStudents(classCode) {
     return this.request(`/faculty/classes/${classCode}/students`);
   }

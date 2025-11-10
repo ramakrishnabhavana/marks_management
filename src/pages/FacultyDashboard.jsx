@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Users, BookOpen, Upload, Eye, Loader2, FileSpreadsheet, Download, Plus } from "lucide-react";
+import { LogOut, Users, BookOpen, Upload, Eye, Loader2, FileSpreadsheet, Download, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -413,6 +413,38 @@ const FacultyDashboard = () => {
     }
   };
 
+  const handleRemoveSubject = async (subjectId) => {
+    if (!confirm('Are you sure you want to remove this subject from your assignments?')) {
+      return;
+    }
+
+    try {
+      await apiService.removeSubjectFromFaculty(subjectId);
+
+      toast({
+        title: "Success",
+        description: "Subject removed successfully",
+      });
+
+      // Refresh faculty data to update the list
+      fetchFacultyData();
+      // If the removed subject was selected, clear the selection
+      if (selectedClass && selectedClass.subjectId === subjectId) {
+        setSelectedClass(null);
+        setSelectedTest("");
+        setBulkMarks({});
+        setStudents([]);
+      }
+    } catch (error) {
+      console.error('Error removing subject:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove subject",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -600,9 +632,22 @@ const FacultyDashboard = () => {
                           <CardTitle className="text-xl mb-2">{subject.subjectCode}</CardTitle>
                           <CardDescription className="text-sm leading-relaxed">{subject.subjectName}</CardDescription>
                         </div>
-                        <Badge variant="default" className="ml-2">
-                          Theory
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="default" className="ml-2">
+                            Theory
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveSubject(subject.subjectId);
+                            }}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
