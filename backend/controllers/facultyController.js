@@ -751,6 +751,118 @@ const upload = multer({
   }
 });
 
+export const getAvailableSubjects = async (req, res) => {
+  try {
+    const faculty = await Faculty.findOne({ user: req.user.id });
+    if (!faculty) {
+      return res.status(404).json({ message: 'Faculty not found' });
+    }
+
+    // Get all subjects in faculty's department that have been added by admin
+    const departmentSubjects = await Subject.find({ department: faculty.department });
+
+    // Get all faculty assignments for subjects in this department
+    const allAssignments = await FacultyAssignment.find({
+      subject: { $in: departmentSubjects.map(s => s._id) }
+    });
+
+    // Get subjects already assigned to this faculty
+    const facultyAssignments = allAssignments.filter(assignment =>
+      assignment.faculty.toString() === faculty._id.toString()
+    );
+    const assignedSubjectIds = facultyAssignments.map(assignment => assignment.subject.toString());
+
+    // Filter out subjects already assigned to this faculty
+    const availableSubjects = departmentSubjects.filter(subject =>
+      !assignedSubjectIds.includes(subject._id.toString())
+    );
+
+    res.json({
+      subjects: availableSubjects.map(subject => ({
+        _id: subject._id,
+        subjectCode: subject.code,
+        subjectName: subject.name,
+        classCode: subject.code, // Will be combined with section when assigned
+        credits: subject.credits,
+        type: subject.type,
+        semester: subject.semester
+      }))
+    });
+  } catch (error) {
+    console.error('Get available subjects error:', error);
+    res.status(500).json({ message: 'Server error: ' + error.message });
+  }
+};
+
+export const assignSubjectToFaculty = async (req, res) => {
+  try {
+    const { subjectId, sections, semester, academicYear } = req.body;
+
+    if (!subjectId || !sections || !semester || !academicYear) {
+      return res.status(400).json({
+        message: 'subjectId, sections, semester, and academicYear are required'
+      });
+    }
+
+    const faculty = await Faculty.findOne({ user: req.user.id });
+    if (!faculty) {
+      return res.status(404).json({ message: 'Faculty not found' });
+    }
+
+    const subject = await Subject.findById(subjectId);
+    if (!subject) {
+      return res.status(404).json({ message: 'Subject not found' });
+    }
+
+    // Verify subject is in faculty's department
+    if (subject.department.toString() !== faculty.department.toString()) {
+      return res.status(403).json({ message: 'Subject not in faculty department' });
+    }
+
+    // Check if faculty is already assigned to this subject
+    const existingAssignment = await FacultyAssignment.findOne({
+      faculty: faculty._id,
+      subject: subject._id,
+      semester: semester
+    });
+
+    if (existingAssignment) {
+      return res.status(400).json({
+        message: 'Faculty is already assigned to this subject for the given semester'
+      });
+    }
+
+    // Create new assignment
+    const assignment = new FacultyAssignment({
+      faculty: faculty._id,
+      subject: subject._id,
+      sections: Array.isArray(sections) ? sections : [sections],
+      semester: semester,
+      academicYear: academicYear
+    });
+
+    await assignment.save();
+
+    res.json({
+      message: 'Subject assigned successfully',
+      assignment: {
+        subject: {
+          code: subject.code,
+          name: subject.name,
+          credits: subject.credits,
+          type: subject.type
+        },
+        sections: assignment.sections,
+        semester: assignment.semester,
+        academicYear: assignment.academicYear
+      }
+    });
+  } catch (error) {
+    console.error('Assign subject to faculty error:', error);
+    res.status(500).json({ message: 'Server error: ' + error.message });
+  }
+};
+
 export const uploadExcelMarks = async (req, res) => {
   try {
     const { classCode, markType } = req.body;

@@ -365,25 +365,25 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-blue-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-blue-200">
+      <header className="bg-gradient-primary text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
+          <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-4">
-              <ShieldCheck className="w-8 h-8 text-blue-500" />
+              <ShieldCheck className="w-8 h-8" />
               <div>
-                <h1 className="text-2xl font-bold text-blue-900">Admin Dashboard</h1>
-                <p className="text-sm text-blue-700">Manage departments, subjects, faculty, classes, and students</p>
+                <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+                <p className="text-sm text-white/90">Manage departments, subjects, faculty, classes, and students</p>
               </div>
             </div>
-            <Button onClick={handleLogout} variant="outline" className="border-blue-300 text-blue-600 hover:bg-blue-50">
+            <Button onClick={handleLogout} variant="outline" className="text-white border-white hover:bg-white/20">
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
           </div>
         </div>
-      </div>
+      </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Department Selector */}

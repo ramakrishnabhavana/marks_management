@@ -59,6 +59,17 @@ class ApiService {
     return this.request('/faculty/subjects');
   }
 
+  async getAvailableSubjects() {
+    return this.request('/faculty/subjects/available');
+  }
+
+  async assignSubjectToFaculty(assignmentData) {
+    return this.request('/faculty/subjects/assign', {
+      method: 'POST',
+      body: assignmentData,
+    });
+  }
+
   async getClassStudents(classCode) {
     return this.request(`/faculty/classes/${classCode}/students`);
   }

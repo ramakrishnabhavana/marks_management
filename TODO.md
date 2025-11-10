@@ -1,18 +1,18 @@
-# Admin Dashboard Enhancement TODO
+# Add "Add Subject" Card to Faculty Dashboard
 
 ## Backend Changes
-- [x] Update Subject model: Add 'abbreviation' field
-- [x] Update Faculty model: Change 'designation' to 'role', add 'facultyId' field
-- [x] Update adminController: Handle abbreviation in addSubjectToDepartment
-- [x] Update adminController: Handle facultyId and role in addFacultyToDepartment
-- [x] Add student creation endpoint: createStudentAndAddToClass
+- [ ] Add `getAvailableSubjects` function in facultyController.js
+- [ ] Add `assignSubjectToFaculty` function in facultyController.js
+- [ ] Add routes in facultyRoutes.js for new endpoints
 
 ## Frontend Changes
-- [x] Update AdminDashboard: Change faculty form to use 'role' and add 'facultyId'
-- [x] Update AdminDashboard: Add student addition dialog to class cards
-- [x] Update api.js: Add method for creating students and adding to class
+- [ ] Add `getAvailableSubjects` and `assignSubjectToFaculty` methods in api.js
+- [ ] Modify FacultyDashboard.jsx to add "Add Subject" card
+- [ ] Add dialog with Command component for subject selection
+- [ ] Add form inputs for sections, semester, academic year
+- [ ] Handle form submission and refresh subjects list
 
 ## Testing
-- [x] Test subject creation with abbreviation
-- [x] Test faculty creation with facultyId and role
-- [x] Test student addition to classes
+- [ ] Test subject assignment functionality
+- [ ] Verify subjects appear correctly in dashboard
+- [ ] Handle validation and error cases

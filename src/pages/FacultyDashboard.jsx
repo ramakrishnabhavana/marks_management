@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { LogOut, Users, BookOpen, Upload, Eye, Loader2, FileSpreadsheet, Download } from "lucide-react";
+import { LogOut, Users, BookOpen, Upload, Eye, Loader2, FileSpreadsheet, Download, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -16,6 +16,22 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { apiService } from "@/services/api";
 
 const FacultyDashboard = () => {
@@ -30,6 +46,13 @@ const FacultyDashboard = () => {
   const [uploading, setUploading] = useState(false);
   const [excelFile, setExcelFile] = useState(null);
   const [excelUploading, setExcelUploading] = useState(false);
+  const [availableSubjects, setAvailableSubjects] = useState([]);
+  const [selectedSubjectForAssignment, setSelectedSubjectForAssignment] = useState(null);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [assignmentSections, setAssignmentSections] = useState('');
+  const [assignmentSemester, setAssignmentSemester] = useState('');
+  const [assignmentAcademicYear, setAssignmentAcademicYear] = useState('');
 
   useEffect(() => {
     fetchFacultyData();
@@ -323,6 +346,73 @@ const FacultyDashboard = () => {
     });
   };
 
+  const fetchAvailableSubjects = async () => {
+    try {
+      const data = await apiService.getAvailableSubjects();
+      setAvailableSubjects(data.subjects || []);
+    } catch (error) {
+      console.error('Error fetching available subjects:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load available subjects",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAssignSubject = async () => {
+    if (!selectedSubjectForAssignment) {
+      toast({
+        title: "Error",
+        description: "Please select a subject to assign",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!assignmentSections || !assignmentSemester || !assignmentAcademicYear) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields: Sections, Semester, and Academic Year",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAssigning(true);
+    try {
+      await apiService.assignSubjectToFaculty({
+        subjectId: selectedSubjectForAssignment._id,
+        classCode: selectedSubjectForAssignment.classCode,
+        sections: assignmentSections.split(',').map(s => s.trim()),
+        semester: assignmentSemester,
+        academicYear: assignmentAcademicYear,
+      });
+
+      toast({
+        title: "Success",
+        description: "Subject assigned successfully",
+      });
+
+      setAssignDialogOpen(false);
+      setSelectedSubjectForAssignment(null);
+      setAssignmentSections('');
+      setAssignmentSemester('');
+      setAssignmentAcademicYear('');
+      // Refresh faculty data to show the new subject
+      fetchFacultyData();
+    } catch (error) {
+      console.error('Error assigning subject:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to assign subject",
+        variant: "destructive",
+      });
+    } finally {
+      setAssigning(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -368,6 +458,132 @@ const FacultyDashboard = () => {
             <CardDescription className="text-base">Select a subject to upload marks</CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="flex justify-end mb-4">
+              <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    onClick={() => {
+                      fetchAvailableSubjects();
+                      setAssignDialogOpen(true);
+                    }}
+                    className="bg-gradient-primary hover:opacity-90"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add New Subject
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[600px]">
+                  <DialogHeader>
+                    <DialogTitle>Add New Subject</DialogTitle>
+                    <DialogDescription>
+                      Select a subject from the available list to assign to your account.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="subject-search">Search and Select Subject</Label>
+                      <Command className="rounded-lg border shadow-md">
+                        <CommandInput id="subject-search" placeholder="Search subjects..." />
+                        <CommandList>
+                          <CommandEmpty>No subjects found.</CommandEmpty>
+                          <CommandGroup>
+                            {availableSubjects.map((subject) => (
+                              <CommandItem
+                                key={subject._id}
+                                value={`${subject.subjectCode} ${subject.subjectName} ${subject.classCode}`}
+                                onSelect={() => setSelectedSubjectForAssignment(subject)}
+                                className={`cursor-pointer ${
+                                  selectedSubjectForAssignment?._id === subject._id ? "bg-accent" : ""
+                                }`}
+                              >
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {subject.subjectCode} - {subject.subjectName}
+                                  </span>
+                                  <span className="text-sm text-muted-foreground">
+                                    Class: {subject.classCode} | Credits: {subject.credits}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </div>
+                    {selectedSubjectForAssignment && (
+                      <div className="p-4 bg-muted rounded-lg">
+                        <h4 className="font-semibold mb-2">Selected Subject:</h4>
+                        <p className="text-sm">
+                          <strong>{selectedSubjectForAssignment.subjectCode}</strong> - {selectedSubjectForAssignment.subjectName}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Class: {selectedSubjectForAssignment.classCode} | Credits: {selectedSubjectForAssignment.credits}
+                        </p>
+                      </div>
+                    )}
+                    {selectedSubjectForAssignment && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="sections">Sections (comma-separated)</Label>
+                          <Input
+                            id="sections"
+                            placeholder="e.g., A,B,C"
+                            value={assignmentSections}
+                            onChange={(e) => setAssignmentSections(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="semester">Semester</Label>
+                          <Input
+                            id="semester"
+                            placeholder="e.g., 3"
+                            value={assignmentSemester}
+                            onChange={(e) => setAssignmentSemester(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="academic-year">Academic Year</Label>
+                          <Input
+                            id="academic-year"
+                            placeholder="e.g., 2023-24"
+                            value={assignmentAcademicYear}
+                            onChange={(e) => setAssignmentAcademicYear(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setAssignDialogOpen(false);
+                        setSelectedSubjectForAssignment(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleAssignSubject}
+                      disabled={!selectedSubjectForAssignment || assigning}
+                      className="bg-gradient-primary hover:opacity-90"
+                    >
+                      {assigning ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Assigning...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Assign Subject
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
             {facultyData?.subjects?.length > 0 ? (
               <div className="grid md:grid-cols-3 gap-6">
                 {facultyData.subjects.map((subject) => (

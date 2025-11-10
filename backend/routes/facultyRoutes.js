@@ -8,7 +8,9 @@ import {
   updateStudentMarks,
   bulkUpdateMarks,
   uploadExcelMarks,
-  upload
+  upload,
+  getAvailableSubjects,
+  assignSubjectToFaculty
 } from '../controllers/facultyController.js';
 
 const router = express.Router();
@@ -18,6 +20,8 @@ router.use(authorize('faculty'));
 
 router.get('/profile', getFacultyProfile);
 router.get('/subjects', getFacultySubjects);
+router.get('/subjects/available', getAvailableSubjects);
+router.post('/subjects/assign', assignSubjectToFaculty);
 router.get('/classes/:classCode/students', getClassStudents);
 router.get('/subjects/:subjectCode/sections/:section/students', getStudentsForSubject);
 router.post('/marks/update', updateStudentMarks);
